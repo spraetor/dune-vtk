@@ -31,7 +31,7 @@ int main(int argc, char** argv)
   {
     FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
     FieldVector<double,dim> upperRight; upperRight = 1.0;
-    auto numElements = filledArray<dim,unsigned int>(1);
+    auto numElements = filledArray<dim,unsigned int>(4);
     auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
     auto& grid = *gridPtr;
 
@@ -44,8 +44,7 @@ int main(int argc, char** argv)
   }
 
   {
-    VtkReader<GridType> vtkReader{};
-    auto gridPtr = vtkReader.read("test_ascii_float32.vtu");
+    auto gridPtr = VtkReader<GridType>::read("test_ascii_float32.vtu");
     auto& grid = *gridPtr;
 
     VtkWriter<GridView> vtkWriter(grid.leafGridView());
@@ -53,8 +52,7 @@ int main(int argc, char** argv)
   }
 
   {
-    VtkReader<GridType> vtkReader{};
-    auto gridPtr = vtkReader.read("test_binary_float32.vtu");
+    auto gridPtr = VtkReader<GridType>::read("test_binary_float32.vtu");
     auto& grid = *gridPtr;
 
     VtkWriter<GridView> vtkWriter(grid.leafGridView());
@@ -62,11 +60,20 @@ int main(int argc, char** argv)
   }
 
   {
-    VtkReader<GridType> vtkReader{};
-    auto gridPtr = vtkReader.read("test_compressed_float64.vtu");
+    auto gridPtr = VtkReader<GridType>::read("test_compressed_float64.vtu");
     auto& grid = *gridPtr;
 
     VtkWriter<GridView> vtkWriter(grid.leafGridView());
     vtkWriter.write("test_ascii_float64_3.vtu", Vtk::ASCII, Vtk::FLOAT64);
+  }
+
+  {
+    using GridType2d = UGGrid<2>;
+    using GridView2d = typename GridType2d::LeafGridView;
+    auto gridPtr = VtkReader<GridType2d>::read("paraview_2d.vtu");
+    auto& grid = *gridPtr;
+
+    VtkWriter<GridView2d> vtkWriter(grid.leafGridView());
+    vtkWriter.write("paraview_2d_ascii.vtu", Vtk::ASCII, Vtk::FLOAT64);
   }
 }

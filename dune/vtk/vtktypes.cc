@@ -5,7 +5,7 @@
 namespace Dune {
 namespace Vtk {
 
-std::map<size_t, GeometryType> Map::type = {
+std::map<std::uint8_t, GeometryType> Map::type = {
   { 1, GeometryTypes::vertex },
   { 3, GeometryTypes::line },
   { 5, GeometryTypes::triangle },

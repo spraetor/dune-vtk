@@ -9,10 +9,17 @@
 namespace Dune
 {
   /// File-Reader for Vtk .vtu files
+  /**
+   * Reads .vtu files and constructs a grid from the cells stored in the file
+   * Additionally, stored data can be read.
+   *
+   * Assumption on the file structure: Each XML tag must be on a separate line.
+   **/
   template <class Grid>
   class VtkReader
-      : public FileReader<Grid>
+      : public FileReader<Grid, VtkReader<Grid>>
   {
+    // Sections visited during the xml parsing
     enum Sections {
       NO_SECTION = 0, VTK_FILE, UNSTRUCTURED_GRID, PIECE, POINT_DATA, PD_DATA_ARRAY, CELL_DATA, CD_DATA_ARRAY,
       POINTS, POINTS_DATA_ARRAY, CELLS, CELLS_DATA_ARRAY, APPENDED_DATA, XML_NAME, XML_NAME_ASSIGN, XML_VALUE
@@ -22,42 +29,51 @@ namespace Dune
     using GlobalCoordinate = typename Entity::Geometry::GlobalCoordinate;
 
   public:
-    /// Constructor
-    VtkReader ()
-      : buffer_(block_size)
+    /// Constructor. Stores a pointer to the GridFactory.
+    VtkReader (GridFactory<Grid>& factory)
+      : factory_(&factory)
     {}
 
-    /// read the file
-    virtual void read (GridFactory<Grid>& factory, std::string const& filename) override;
-    using FileReader<Grid>::read;
+    /// Read the grid from file with `filename` into the GridFactory `factory`
+    void readFromFile (std::string const& filename);
+
+    /// Implementation of \ref FileReader interface
+    static void readFactoryImpl (GridFactory<Grid>& factory, std::string const& filename)
+    {
+      VtkReader reader{factory};
+      reader.readFromFile(filename);
+    }
 
   private:
-    Sections readCellData (std::ifstream&,
-                           GridFactory<Grid>& /*factory*/,
+    // Read values stored on the cells with name `name`
+    template <class T>
+    Sections readCellData (std::ifstream& /*input*/,
+                           std::vector<T>& /*values*/,
                            std::string /*name*/,
                            Vtk::DataTypes /*type*/,
                            std::size_t /*nComponents*/,
                            std::string /*format*/,
-                           std::size_t /*offset*/)
+                           std::uint64_t /*offset*/)
     {
       /* does not read anything */
       return CD_DATA_ARRAY;
     }
 
-    Sections readPointData (std::ifstream&,
-                            GridFactory<Grid>& /*factory*/,
+    template <class T>
+    Sections readPointData (std::ifstream& /*input*/,
+                            std::vector<T>& /*values*/,
                             std::string /*name*/,
                             Vtk::DataTypes /*type*/,
                             std::size_t /*nComponents*/,
                             std::string /*format*/,
-                            std::size_t /*offset*/)
+                            std::uint64_t /*offset*/)
     {
       /* does not read anything */
       return PD_DATA_ARRAY;
     }
 
+    // Read vertex coordinates from `input` stream and store in into `factory`
     Sections readPoints (std::ifstream& input,
-                         GridFactory<Grid>& factory,
                          std::string name,
                          Vtk::DataTypes type,
                          std::size_t nComponents,
@@ -65,11 +81,10 @@ namespace Dune
                          std::uint64_t offset);
 
     template <class T>
-    void readPointsAppended (std::ifstream& input,
-                             GridFactory<Grid>& factory);
+    void readPointsAppended (std::ifstream& input);
 
+    // Read cell type, cell offsets and connectivity from `input` stream
     Sections readCells (std::ifstream& input,
-                        GridFactory<Grid>& factory,
                         std::string name,
                         Vtk::DataTypes type,
                         std::string format,
@@ -77,13 +92,15 @@ namespace Dune
 
     void readCellsAppended (std::ifstream& input);
 
+    // Read data from appended section in vtk file, starting from `offset`
     template <class T>
     void readAppended (std::ifstream& input, std::vector<T>& values, std::uint64_t offset);
 
-    inline bool isSection (std::string line,
-                           std::string key,
-                           Sections current,
-                           Sections parent = NO_SECTION)
+    // Test whether line belongs to section
+    bool isSection (std::string line,
+                    std::string key,
+                    Sections current,
+                    Sections parent = NO_SECTION)
     {
       bool result = line.substr(1, key.length()) == key;
       if (result && current != parent)
@@ -91,27 +108,33 @@ namespace Dune
       return result;
     }
 
-    std::map<std::string, std::string> parseXml(std::string const& line);
+    // Read attributes from current xml tag
+    std::map<std::string, std::string> parseXml(std::string const& line, bool& closed);
 
-    void createGrid(GridFactory<Grid>& factory) const;
+    // Construct a grid using the GridFactory `factory` and the read vectors
+    // \ref vec_types, \ref vec_offsets, and \ref vec_connectivity
+    void createGrid() const;
 
   private:
+    GridFactory<Grid>* factory_;
+
+    /// Data format, i.e. ASCII, BINARY or COMPRESSED. Read from xml attributes.
     Vtk::FormatTypes format_;
 
-    std::vector<std::uint8_t> vec_types;
-    std::vector<std::int64_t> vec_offsets;
-    std::vector<std::int64_t> vec_connectivity;
+    // Temporary data to construct the grid elements
+    std::vector<std::uint8_t> vec_types; //< VTK cell type ID
+    std::vector<std::int64_t> vec_offsets; //< offset of vertices of cell
+    std::vector<std::int64_t> vec_connectivity; //< vertex indices of cell
 
-    std::size_t numCells_;
-    std::size_t numVertices_;
-    std::size_t numData_;
+    std::size_t numCells_; //< Number of cells in the grid
+    std::size_t numVertices_; // Number of vertices in the grid
 
+    // offset information for appended data
     // map Name -> {DataType,Offset}
     std::map<std::string, std::pair<Vtk::DataTypes,std::uint64_t>> offsets_;
-    std::uint64_t offset0_;
 
-    std::size_t const block_size = 1024*32;
-    std::vector<unsigned char> buffer_;
+    /// Offset of beginning of appended data
+    std::uint64_t offset0_;
   };
 
 } // end namespace Dune

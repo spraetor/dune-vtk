@@ -36,13 +36,13 @@ int main(int argc, char** argv)
 #if GRID_TYPE == 1
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(1);
+  auto numElements = filledArray<dim,int>(4);
   GridType grid(upperRight,numElements);
 #elif GRID_TYPE == 2
   using GridType = UGGrid<dim>;
   FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,unsigned int>(2);
+  auto numElements = filledArray<dim,unsigned int>(4);
   auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
   auto& grid = *gridPtr;
 #endif

@@ -7,6 +7,7 @@
 
 namespace Dune
 {
+  /// An abstract base class for LocalFunctions
   template <class GridView>
   class VTKLocalFunctionInterface
   {
@@ -14,16 +15,16 @@ namespace Dune
     using Entity = typename GridView::template Codim<0>::Entity;
     using LocalCoordinate = typename Entity::Geometry::LocalCoordinate;
 
-    //! Bind the function to the grid entity
+    /// Bind the function to the grid entity
     virtual void bind (Entity const& entity) = 0;
 
-    //! Unbind from the currently bound entity
+    /// Unbind from the currently bound entity
     virtual void unbind () = 0;
 
-    //! Evaluate single component comp in the entity at local coordinates xi
+    /// Evaluate single component comp in the entity at local coordinates xi
     virtual double evaluate (int comp, LocalCoordinate const& xi) const = 0;
 
-    //! Virtual destructor
+    /// Virtual destructor
     virtual ~VTKLocalFunctionInterface () = default;
   };
 
@@ -64,14 +65,17 @@ namespace Dune
       }
 
     private:
+      // Evaluate a component of a vector valued data
       double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
       {
         auto y = this->get()(xi);
         return y[comp];
       }
 
-      double evaluateImpl (int /*comp*/, LocalCoordinate const& xi, std::false_type) const
+      // Return the scalar values
+      double evaluateImpl (int comp, LocalCoordinate const& xi, std::false_type) const
       {
+        assert(comp == 0);
         return this->get()(xi);
       }
     };
@@ -97,18 +101,19 @@ namespace Dune
 
     VTKLocalFunction () = default;
 
-    //! Bind the function to the grid entity
+    /// Bind the function to the grid entity
     void bind (Entity const& entity)
     {
       this->asInterface().bind(entity);
     }
 
-    //! Unbind from the currently bound entity
+    /// Unbind from the currently bound entity
     void unbind ()
     {
       this->asInterface().unbind();
     }
 
+    /// Evaluate the `comp` component of the Range value at local coordinate `xi`
     double evaluate (int comp, LocalCoordinate const& xi) const
     {
       return this->asInterface().evaluate(comp, xi);
@@ -117,14 +122,15 @@ namespace Dune
 
   // ---------------------------------------------------------------------------
 
+  /// An abstract base class for GlobalFunctions
   template <class GridView>
   class VTKFunctionInterface
   {
   public:
-    //! Create a local function
+    /// Create a local function
     virtual VTKLocalFunction<GridView> makelocalFunction () const = 0;
 
-    //! Virtual destructor
+    /// Virtual destructor
     virtual ~VTKFunctionInterface () = default;
   };
 
@@ -156,27 +162,35 @@ namespace Dune
     using Super = Functions::TypeErasureBase<VTKFunctionInterface<GridView>,
                                              VTKFunctionImpl<GridView>::template Model>;
 
+    template <class F>
+    using IsGridFunction = decltype(localFunction(std::declval<F>()));
+
   public:
     template <class F, disableCopyMove<VTKFunction, F> = 0>
     VTKFunction (F&& f, std::string name, int ncomps = 1)
       : Super(std::forward<F>(f))
       , name_(std::move(name))
       , ncomps_(ncomps)
-    {}
+    {
+      static_assert(Std::is_detected<IsGridFunction,F>::value,
+        "Requires A GridFunction to be passed to the VTKFunction.");
+    }
 
     VTKFunction () = default;
 
-    //! Bind the function to the grid entity
+    /// Create a LocalFunction
     friend VTKLocalFunction<GridView> localFunction (VTKFunction const& self)
     {
       return self.asInterface().makelocalFunction();
     }
 
+    /// Return the number of components of the Range
     int ncomps () const
     {
-      return ncomps_;
+      return ncomps_; // TODO: detect automatically. Is this always possible?
     }
 
+    /// Return a name associated with the function
     std::string name () const
     {
       return name_;
