@@ -23,18 +23,11 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
 
   std::ifstream input(filename, std::ios_base::in | std::ios_base::binary);
 
-  std::string data_name = "",
-              data_format = "";
+  std::string compressor = "";
+  std::string data_name = "", data_format = "";
   Vtk::DataTypes data_type = Vtk::UNKNOWN;
   std::size_t data_components = 0;
   std::uint64_t data_offset = 0;
-
-  std::string file_type = "",
-              byte_order = "",
-              header_type = "",
-              compressor = "",
-              encoding = "";
-  double version = 0.0;
 
   Sections section = NO_SECTION;
   for (std::string line; std::getline(input, line); ) {
@@ -43,17 +36,22 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
     if (isSection(line, "VTKFile", section)) {
       bool closed = false;
       auto attr = parseXml(line, closed);
-      file_type = attr["type"];
-      if (file_type != "UnstructuredGrid")
-        DUNE_THROW(NotImplemented, "Only UnstructuredGrid format implemented. Found: " << file_type);
+
+      if (!attr["type"].empty())
+        assert(attr["type"] == "UnstructuredGrid");
       if (!attr["version"].empty())
         assert(std::stod(attr["version"]) == 1.0);
-      if (!attr["header_type"].empty())
+      if (!attr["byte_order"].empty())
         assert(attr["byte_order"] == "LittleEndian");
       if (!attr["header_type"].empty())
         assert(attr["header_type"] == "UInt64");
-      if (!attr["compressor"].empty())
+      if (!attr["compressor"].empty()) {
         compressor = attr["compressor"];
+        assert(compressor == "vtkZLibDataCompressor"); // only ZLib compression supported
+      }
+
+      // std::cout << "<VTKFile type='" << attr["type"] << "' version='" << attr["version"] << "' header_type='" << attr["header_type"] << "' byte_order='" << attr["byte_order"] << "' compressor='" << attr["compressor"] << "'>\n";
+
       section = VTK_FILE;
     }
     else if (isSection(line, "/VTKFile", section, VTK_FILE))
@@ -65,8 +63,10 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
     else if (isSection(line, "Piece", section, UNSTRUCTURED_GRID)) {
       bool closed = false;
       auto attr = parseXml(line, closed);
-      numVertices_ = std::stol(attr["NumberOfPoints"]);
-      numCells_ = std::stol(attr["NumberOfCells"]);
+
+      assert(attr.count("NumberOfPoints") > 0 && attr.count("NumberOfCells") > 0);
+      numberOfPoints_ = std::stoul(attr["NumberOfPoints"]);
+      numberOfCells_ = std::stoul(attr["NumberOfCells"]);
       section = PIECE;
     }
     else if (isSection(line, "/Piece", section, PIECE))
@@ -92,28 +92,51 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
       auto attr = parseXml(line, closed);
 
       data_type = Vtk::Map::datatype[attr["type"]];
-      data_name = attr["Name"];
+
+      if (!attr["Name"].empty())
+        data_name = to_lower(attr["Name"]);
+      else if (section == POINTS)
+        data_name = "points";
+
+      data_components = 1;
       if (!attr["NumberOfComponents"].empty())
         data_components = std::stoul(attr["NumberOfComponents"]);
 
       // determine FormatType
-      data_format = attr["format"];
+      data_format = to_lower(attr["format"]);
       if (data_format == "appended") {
-        if (!compressor.empty())
-          format_ = Vtk::COMPRESSED;
-        else
-          format_ = Vtk::BINARY;
+        format_ = !compressor.empty() ? Vtk::COMPRESSED : Vtk::BINARY;
       } else {
         format_ = Vtk::ASCII;
       }
 
+      // Offset makes sense in appended mode only
+      data_offset = 0;
       if (!attr["offset"].empty()) {
         data_offset = std::stoul(attr["offset"]);
         assert(data_format == "appended");
       }
 
-      if (closed) continue;
-      else if (section == POINT_DATA)
+      // Store attributes of DataArray
+      dataArray_[data_name] = {data_type, data_components, data_offset};
+
+      // std::cout << "<DataArray type='" << attr["type"] << "' Name='" << data_name << "' NumberOfComponents='" << attr["NumberOfComponents"] << "' format='" << data_format << "' offset='" << attr["offset"] << "' " << (closed ? "/" : "") << ">\n";
+
+      // Skip section in appended mode
+      if (data_format == "appended") {
+        if (!closed) {
+          while (std::getline(input, line)) {
+            ltrim(line);
+            if (line.substr(1,10) == "/DataArray") {
+              // std::cout << "</DataArray>\n";
+              break;
+            }
+          }
+        }
+        continue;
+      }
+
+      if (section == POINT_DATA)
         section = PD_DATA_ARRAY;
       else if (section == POINTS)
         section = POINTS_DATA_ARRAY;
@@ -139,16 +162,11 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
     else if (isSection(line, "AppendedData", section, VTK_FILE)) {
       bool closed = false;
       auto attr = parseXml(line, closed);
-      encoding = attr["encoding"];
-      if (encoding != "raw")
-        DUNE_THROW(NotImplemented, "Binary encoding != raw not implemented.");
+      if (!attr["encoding"].empty())
+        assert(attr["encoding"] == "raw"); // base64 encoding not supported
 
-      // Find starting point of appended data
-      while (input.get() != '_')
-        /*do nothing*/;
-
-      offset0_ = input.tellg()+1;
-      if (offsets_["points"].first == Vtk::FLOAT32)
+      offset0_ = findAppendedDataPosition(input);
+      if (dataArray_["points"].type == Vtk::FLOAT32)
         readPointsAppended<float>(input);
       else
         readPointsAppended<double>(input);
@@ -163,26 +181,26 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
       case PD_DATA_ARRAY:
         if (data_type == Vtk::FLOAT32) {
           std::vector<float> values;
-          section = readPointData(input, values, data_name, data_type, data_components, data_format, data_offset);
-        } else {
+          section = readPointData(input, values, data_name);
+        } else if (data_type == Vtk::FLOAT64) {
           std::vector<double> values;
-          section = readPointData(input, values, data_name, data_type, data_components, data_format, data_offset);
+          section = readPointData(input, values, data_name);
         }
         break;
       case POINTS_DATA_ARRAY:
-        section = readPoints(input, data_name, data_type, data_components, data_format, data_offset);
+        section = readPoints(input);
         break;
       case CD_DATA_ARRAY:
         if (data_type == Vtk::FLOAT32) {
           std::vector<float> values;
-          section = readCellData(input, values, data_name, data_type, data_components, data_format, data_offset);
-        } else {
+          section = readCellData(input, values, data_name);
+        } else if (data_type == Vtk::FLOAT64) {
           std::vector<double> values;
-          section = readCellData(input, values, data_name, data_type, data_components, data_format, data_offset);
+          section = readCellData(input, values, data_name);
         }
         break;
       case CELLS_DATA_ARRAY:
-        section = readCells(input, data_name, data_type, data_format, data_offset);
+        section = readCells(input, data_name);
         break;
       default:
         // do nothing
@@ -208,17 +226,16 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
  * \param parent_section   XML Section to return when current `section` is finished.
  **/
 template <class IStream, class T, class Sections>
-Sections read_data_array (IStream& input, std::vector<T>& values, std::size_t max_size,
-                          Sections section, Sections parent_section)
+Sections readDataArray (IStream& input, std::vector<T>& values, std::size_t max_size,
+                        Sections section, Sections parent_section)
 {
   values.reserve(max_size);
-  using S = std::conditional_t<(sizeof(T) <= 1), std::uint16_t, T>;
+  using S = std::conditional_t<(sizeof(T) <= 1), std::uint16_t, T>; // problem when reading chars as ints
 
   std::size_t idx = 0;
-  std::string line;
-  while (std::getline(input, line)) {
+  for (std::string line; std::getline(input, line);) {
     trim(line);
-    if (line.substr(0,12) == std::string("</DataArray>"))
+    if (line.substr(1,10) == "/DataArray")
       return parent_section;
 
     std::istringstream stream(line);
@@ -234,25 +251,21 @@ Sections read_data_array (IStream& input, std::vector<T>& values, std::size_t ma
 
 template <class Grid>
 typename VtkReader<Grid>::Sections
-VtkReader<Grid>::readPoints (std::ifstream& input, std::string name, Vtk::DataTypes type,
-                             std::size_t nComponents, std::string format, std::uint64_t offset)
+VtkReader<Grid>::readPoints (std::ifstream& input)
 {
-  if (format == "appended") {
-    offsets_["points"] = {type, offset};
-    return POINTS;
-  }
-
-  assert(numVertices_ > 0);
   using T = typename GlobalCoordinate::value_type;
+  assert(numberOfPoints_ > 0);
+  assert(dataArray_["points"].components == 3u);
+
   std::vector<T> point_values;
-  auto sec = read_data_array(input, point_values, 3*numVertices_, POINTS_DATA_ARRAY, POINTS);
+  auto sec = readDataArray(input, point_values, 3*numberOfPoints_, POINTS_DATA_ARRAY, POINTS);
   assert(sec == POINTS);
-  assert(point_values.size() == 3*numVertices_);
+  assert(point_values.size() == 3*numberOfPoints_);
 
   // extract points from continuous values
   GlobalCoordinate p;
   std::size_t idx = 0;
-  for (std::size_t i = 0; i < numVertices_; ++i) {
+  for (std::size_t i = 0; i < numberOfPoints_; ++i) {
     for (std::size_t j = 0; j < p.size(); ++j)
       p[j] = point_values[idx++];
     idx += (3u - p.size());
@@ -267,16 +280,17 @@ template <class Grid>
   template <class T>
 void VtkReader<Grid>::readPointsAppended (std::ifstream& input)
 {
-  assert(numVertices_ > 0);
-  auto offset_data = offsets_["points"];
+  assert(numberOfPoints_ > 0);
+  assert(dataArray_["points"].components == 3u);
+
   std::vector<T> point_values;
-  readAppended(input, point_values, offset_data.second);
-  assert(point_values.size() == 3*numVertices_);
+  readAppended(input, point_values, dataArray_["points"].offset);
+  assert(point_values.size() == 3*numberOfPoints_);
 
   // extract points from continuous values
   GlobalCoordinate p;
   std::size_t idx = 0;
-  for (std::size_t i = 0; i < numVertices_; ++i) {
+  for (std::size_t i = 0; i < numberOfPoints_; ++i) {
     for (std::size_t j = 0; j < p.size(); ++j)
       p[j] = T(point_values[idx++]);
     idx += (3u - p.size());
@@ -288,31 +302,25 @@ void VtkReader<Grid>::readPointsAppended (std::ifstream& input)
 
 template <class Grid>
 typename VtkReader<Grid>::Sections
-VtkReader<Grid>::readCells (std::ifstream& input, std::string name, Vtk::DataTypes type,
-                            std::string format, std::uint64_t offset)
+VtkReader<Grid>::readCells (std::ifstream& input, std::string name)
 {
-  if (format == "appended") {
-    offsets_[name] = {type, offset};
-    return CELLS;
-  }
-
   Sections sec = CELLS_DATA_ARRAY;
 
-  assert(numCells_ > 0);
+  assert(numberOfCells_ > 0);
   if (name == "types") {
-    sec = read_data_array(input, vec_types, numCells_, CELLS_DATA_ARRAY, CELLS);
-    assert(vec_types.size() == numCells_);
+    sec = readDataArray(input, vec_types, numberOfCells_, CELLS_DATA_ARRAY, CELLS);
+    assert(vec_types.size() == numberOfCells_);
   } else if (name == "offsets") {
-    sec = read_data_array(input, vec_offsets, numCells_, CELLS_DATA_ARRAY, CELLS);
-    assert(vec_offsets.size() == numCells_);
+    sec = readDataArray(input, vec_offsets, numberOfCells_, CELLS_DATA_ARRAY, CELLS);
+    assert(vec_offsets.size() == numberOfCells_);
   } else if (name == "connectivity") {
     std::size_t max_size = 0;
     int max_vertices = (Grid::dimension == 1 ? 2 : Grid::dimension == 2 ? 4 : 8);
     if (!vec_offsets.empty())
       max_size = vec_offsets.back();
     else
-      max_size = numCells_ * max_vertices;
-    sec = read_data_array(input, vec_connectivity, max_size, CELLS_DATA_ARRAY, CELLS);
+      max_size = numberOfCells_ * max_vertices;
+    sec = readDataArray(input, vec_connectivity, max_size, CELLS_DATA_ARRAY, CELLS);
   }
 
   return sec;
@@ -322,21 +330,21 @@ VtkReader<Grid>::readCells (std::ifstream& input, std::string name, Vtk::DataTyp
 template <class Grid>
 void VtkReader<Grid>::readCellsAppended (std::ifstream& input)
 {
-  assert(numCells_ > 0);
-  auto types_data = offsets_["types"];
-  auto offsets_data = offsets_["offsets"];
-  auto connectivity_data = offsets_["connectivity"];
+  assert(numberOfCells_ > 0);
+  auto types_data = dataArray_["types"];
+  auto dataArray_data = dataArray_["offsets"];
+  auto connectivity_data = dataArray_["connectivity"];
 
-  assert(types_data.first == Vtk::UINT8);
-  readAppended(input, vec_types, types_data.second);
-  assert(vec_types.size() == numCells_);
+  assert(types_data.type == Vtk::UINT8);
+  readAppended(input, vec_types, types_data.offset);
+  assert(vec_types.size() == numberOfCells_);
 
-  assert(offsets_data.first == Vtk::INT64);
-  readAppended(input, vec_offsets, offsets_data.second);
-  assert(vec_offsets.size() == numCells_);
+  assert(dataArray_data.type == Vtk::INT64);
+  readAppended(input, vec_offsets, dataArray_data.offset);
+  assert(vec_offsets.size() == numberOfCells_);
 
-  assert(connectivity_data.first == Vtk::INT64);
-  readAppended(input, vec_connectivity, connectivity_data.second);
+  assert(connectivity_data.type == Vtk::INT64);
+  readAppended(input, vec_connectivity, connectivity_data.offset);
   assert(vec_connectivity.size() == vec_offsets.back());
 }
 
@@ -360,13 +368,14 @@ void read_compressed (T* buffer, unsigned char* buffer_in,
   Bytef* compressed_buffer = reinterpret_cast<Bytef*>(buffer_in);
   Bytef* uncompressed_buffer = reinterpret_cast<Bytef*>(buffer);
 
-  input.readsome((char*)(compressed_buffer), compressed_space);
+  input.read((char*)(compressed_buffer), compressed_space);
   assert(input.gcount() == compressed_space);
 
   if (uncompress(uncompressed_buffer, &uncompressed_space, compressed_buffer, compressed_space) != Z_OK) {
     std::cerr << "Zlib error while uncompressing data.\n";
     std::abort();
   }
+  assert(uLongf(bs) == uncompressed_space);
 #else
   std::cerr << "Can not call read_compressed without compression enabled!\n";
   std::abort();
@@ -405,7 +414,6 @@ void VtkReader<Grid>::readAppended (std::ifstream& input, std::vector<T>& values
   } else {
     input.read((char*)&size, sizeof(std::uint64_t));
   }
-  std::cout << "size = " << size << "\n";
   assert(size > 0 && (size % sizeof(T)) == 0);
   values.resize(size / sizeof(T));
 
@@ -421,7 +429,7 @@ void VtkReader<Grid>::readAppended (std::ifstream& input, std::vector<T>& values
       read_compressed(values.data() + i*num_values, buffer_in.data(), bs, cbs[i], input);
     }
   } else {
-    input.readsome((char*)(values.data()), size);
+    input.read((char*)(values.data()), size);
     assert(input.gcount() == size);
   }
 }
@@ -451,6 +459,20 @@ void VtkReader<Grid>::createGrid () const
 
     factory_->insertElement(type,cell);
   }
+}
+
+
+template <class Grid>
+std::uint64_t VtkReader<Grid>::findAppendedDataPosition (std::ifstream& input) const
+{
+  char c;
+  while (input.get(c) && std::isblank(c)) { /*do nothing*/ }
+
+  std::uint64_t offset = input.tellg();
+  if (c != '_')
+    --offset; // if char is not '_', assume it is part of the data.
+
+  return offset;
 }
 
 

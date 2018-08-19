@@ -25,6 +25,13 @@ namespace Dune
       POINTS, POINTS_DATA_ARRAY, CELLS, CELLS_DATA_ARRAY, APPENDED_DATA, XML_NAME, XML_NAME_ASSIGN, XML_VALUE
     };
 
+    struct DataArrayAttributes
+    {
+      Vtk::DataTypes type;
+      std::size_t components = 1;
+      std::uint64_t offset = 0;
+    };
+
     using Entity = typename Grid::template Codim<0>::Entity;
     using GlobalCoordinate = typename Entity::Geometry::GlobalCoordinate;
 
@@ -47,48 +54,27 @@ namespace Dune
   private:
     // Read values stored on the cells with name `name`
     template <class T>
-    Sections readCellData (std::ifstream& /*input*/,
-                           std::vector<T>& /*values*/,
-                           std::string /*name*/,
-                           Vtk::DataTypes /*type*/,
-                           std::size_t /*nComponents*/,
-                           std::string /*format*/,
-                           std::uint64_t /*offset*/)
+    Sections readCellData (std::ifstream& /*input*/, std::vector<T>& /*values*/, std::string /*name*/)
     {
       /* does not read anything */
       return CD_DATA_ARRAY;
     }
 
     template <class T>
-    Sections readPointData (std::ifstream& /*input*/,
-                            std::vector<T>& /*values*/,
-                            std::string /*name*/,
-                            Vtk::DataTypes /*type*/,
-                            std::size_t /*nComponents*/,
-                            std::string /*format*/,
-                            std::uint64_t /*offset*/)
+    Sections readPointData (std::ifstream& /*input*/, std::vector<T>& /*values*/, std::string /*name*/)
     {
       /* does not read anything */
       return PD_DATA_ARRAY;
     }
 
     // Read vertex coordinates from `input` stream and store in into `factory`
-    Sections readPoints (std::ifstream& input,
-                         std::string name,
-                         Vtk::DataTypes type,
-                         std::size_t nComponents,
-                         std::string format,
-                         std::uint64_t offset);
+    Sections readPoints (std::ifstream& input);
 
     template <class T>
     void readPointsAppended (std::ifstream& input);
 
     // Read cell type, cell offsets and connectivity from `input` stream
-    Sections readCells (std::ifstream& input,
-                        std::string name,
-                        Vtk::DataTypes type,
-                        std::string format,
-                        std::uint64_t offset);
+    Sections readCells (std::ifstream& input, std::string name);
 
     void readCellsAppended (std::ifstream& input);
 
@@ -100,13 +86,16 @@ namespace Dune
     bool isSection (std::string line,
                     std::string key,
                     Sections current,
-                    Sections parent = NO_SECTION)
+                    Sections parent = NO_SECTION) const
     {
       bool result = line.substr(1, key.length()) == key;
       if (result && current != parent)
         DUNE_THROW(Exception , "<" << key << "> in wrong section." );
       return result;
     }
+
+    // Find beginning of appended binary data
+    std::uint64_t findAppendedDataPosition (std::ifstream& input) const;
 
     // Read attributes from current xml tag
     std::map<std::string, std::string> parseXml(std::string const& line, bool& closed);
@@ -126,12 +115,12 @@ namespace Dune
     std::vector<std::int64_t> vec_offsets; //< offset of vertices of cell
     std::vector<std::int64_t> vec_connectivity; //< vertex indices of cell
 
-    std::size_t numCells_; //< Number of cells in the grid
-    std::size_t numVertices_; // Number of vertices in the grid
+    std::size_t numberOfCells_; //< Number of cells in the grid
+    std::size_t numberOfPoints_; // Number of vertices in the grid
 
     // offset information for appended data
-    // map Name -> {DataType,Offset}
-    std::map<std::string, std::pair<Vtk::DataTypes,std::uint64_t>> offsets_;
+    // map Name -> {DataType,NumberOfComponents,Offset}
+    std::map<std::string, DataArrayAttributes> dataArray_;
 
     /// Offset of beginning of appended data
     std::uint64_t offset0_;

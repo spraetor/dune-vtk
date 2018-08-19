@@ -1,17 +1,19 @@
 #pragma once
 
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace Dune
 {
-  template <class Grid, class GridReaderImp>
+  template <class Grid, class FilerReaderImp>
   class FileReader
   {
   private:
     // type of underlying implementation, for internal use only
-    using Implementation = GridReaderImp;
+    using Implementation = FilerReaderImp;
 
-    //! \brief An accessor class to call protected members of reader implementations.
+    /// \brief An accessor class to call protected members of reader implementations.
     struct Accessor : public Implementation
     {
       template <class... Args>
@@ -28,16 +30,16 @@ namespace Dune
     };
 
   public:
-    //! Reads the grid from a file with filename and returns a unique_ptr to the created grid.
-    //! Redirects to concrete implementation of derivated class.
+    /// Reads the grid from a file with filename and returns a unique_ptr to the created grid.
+    /// Redirects to concrete implementation of derivated class.
     template <class... Args>
     static std::unique_ptr<Grid> read (const std::string &filename, Args&&... args)
     {
       return Accessor::readImpl(filename, std::forward<Args>(args)...);
     }
 
-    //! Reads the grid from a file with filename into a grid-factory.
-    //! Redirects to concrete implementation of derivated class.
+    /// Reads the grid from a file with filename into a grid-factory.
+    /// Redirects to concrete implementation of derivated class.
     template <class... Args>
     static void read (GridFactory<Grid> &factory, const std::string &filename, Args&&... args)
     {

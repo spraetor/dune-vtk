@@ -21,7 +21,7 @@
 namespace Dune {
 
 template <class GridView>
-void VtkWriter<GridView>::write(std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
+void VtkWriter<GridView>::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
 {
   format_ = format;
   datatype_ = datatype;
@@ -53,7 +53,7 @@ void VtkWriter<GridView>::write(std::string const& fn, Vtk::FormatTypes format, 
 
 
 template <class GridView>
-void VtkWriter<GridView>::writeImpl(std::string const& filename) const
+void VtkWriter<GridView>::writeImpl (std::string const& filename) const
 {
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
   if (format_ == Vtk::ASCII) {
@@ -134,9 +134,10 @@ void VtkWriter<GridView>::writeImpl(std::string const& filename) const
 
 
 // @{ implementation details
+// TODO: allow to overload these function
 
 template <class T, class GridView>
-std::vector<T> getPoints(GridView const& gridView)
+std::vector<T> getPoints (GridView const& gridView)
 {
   const int dim = GridView::dimension;
   std::vector<T> data(gridView.size(dim) * 3);
@@ -153,7 +154,7 @@ std::vector<T> getPoints(GridView const& gridView)
 }
 
 template <class T, class GridView, class GlobalFunction>
-std::vector<T> getVertexData(GridView const& gridView, GlobalFunction const& fct)
+std::vector<T> getVertexData (GridView const& gridView, GlobalFunction const& fct)
 {
   const int dim = GridView::dimension;
   std::vector<T> data(gridView.size(dim) * fct.ncomps());
@@ -174,7 +175,7 @@ std::vector<T> getVertexData(GridView const& gridView, GlobalFunction const& fct
 }
 
 template <class T, class GridView, class GlobalFunction>
-std::vector<T> getCellData(GridView const& gridView, GlobalFunction const& fct)
+std::vector<T> getCellData (GridView const& gridView, GlobalFunction const& fct)
 {
   const int dim = GridView::dimension;
   std::vector<T> data(gridView.size(0) * fct.ncomps());
@@ -195,8 +196,8 @@ std::vector<T> getCellData(GridView const& gridView, GlobalFunction const& fct)
 
 
 template <class GridView>
-void VtkWriter<GridView>::writeData(std::ofstream& out, std::vector<pos_type>& offsets,
-                          GlobalFunction const& fct, Vtk::PositionTypes type) const
+void VtkWriter<GridView>::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
+                                     GlobalFunction const& fct, Vtk::PositionTypes type) const
 {
   out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << (datatype_ == Vtk::FLOAT32 ? "Float32" : "Float64") << "\""
       << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
@@ -223,7 +224,7 @@ void VtkWriter<GridView>::writeData(std::ofstream& out, std::vector<pos_type>& o
 
 
 template <class GridView>
-void VtkWriter<GridView>::writePoints(std::ofstream& out, std::vector<pos_type>& offsets) const
+void VtkWriter<GridView>::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   out << "<DataArray type=\"" << (datatype_ == Vtk::FLOAT32 ? "Float32" : "Float64") << "\""
       << " NumberOfComponents=\"3\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
@@ -244,7 +245,7 @@ void VtkWriter<GridView>::writePoints(std::ofstream& out, std::vector<pos_type>&
 
 
 template <class GridView>
-void VtkWriter<GridView>::writeCells(std::ofstream& out, std::vector<pos_type>& offsets) const
+void VtkWriter<GridView>::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   auto const& indexSet = gridView_.indexSet();
   if (format_ == Vtk::ASCII) {
@@ -295,8 +296,8 @@ void VtkWriter<GridView>::writeCells(std::ofstream& out, std::vector<pos_type>& 
 // @{ implementation details
 
 template <class T>
-std::uint64_t write_values_to_buffer(std::size_t max_num_values, unsigned char* buffer,
-                                     std::vector<T> const& vec, std::size_t shift)
+std::uint64_t writeValuesToBuffer (std::size_t max_num_values, unsigned char* buffer,
+                                   std::vector<T> const& vec, std::size_t shift)
 {
   std::size_t num_values = std::min(max_num_values, vec.size()-shift);
   std::uint64_t bs = num_values*sizeof(T);
@@ -306,7 +307,7 @@ std::uint64_t write_values_to_buffer(std::size_t max_num_values, unsigned char* 
 
 
 template <class OStream>
-std::uint64_t write_compressed(unsigned char const* buffer, unsigned char* buffer_out,
+std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffer_out,
                                std::uint64_t bs, std::uint64_t cbs, int level, OStream& outb)
 {
 #ifdef HAVE_ZLIB
@@ -325,7 +326,7 @@ std::uint64_t write_compressed(unsigned char const* buffer, unsigned char* buffe
 
   return compressed_space;
 #else
-  std::cerr << "Can not call write_compressed without compression enabled!\n";
+  std::cerr << "Can not call writeCompressed without compression enabled!\n";
   std::abort();
   return 0;
 #endif
@@ -335,7 +336,7 @@ std::uint64_t write_compressed(unsigned char const* buffer, unsigned char* buffe
 
 template <class GridView>
   template <class T>
-std::uint64_t VtkWriter<GridView>::writeAppended(std::ofstream& out, std::vector<T> const& values) const
+std::uint64_t VtkWriter<GridView>::writeAppended (std::ofstream& out, std::vector<T> const& values) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
   pos_type begin_pos = out.tellp();
@@ -365,11 +366,11 @@ std::uint64_t VtkWriter<GridView>::writeAppended(std::ofstream& out, std::vector
 
   std::vector<std::uint64_t> cbs(std::size_t(num_blocks), 0); // compressed block sizes
   for (std::size_t i = 0; i < std::size_t(num_blocks); ++i) {
-    std::uint64_t bs = write_values_to_buffer<T>(num_values, buffer.data(), values, i*num_values);
+    std::uint64_t bs = writeValuesToBuffer<T>(num_values, buffer.data(), values, i*num_values);
 
     if (format_ == Vtk::COMPRESSED) {
       buffer_out.resize(std::size_t(compressed_block_size));
-      cbs[i] = write_compressed(buffer.data(), buffer_out.data(), bs,
+      cbs[i] = writeCompressed(buffer.data(), buffer_out.data(), bs,
                                 compressed_block_size, compression_level, out);
     } else
       out.write((char*)buffer.data(), bs);
@@ -388,7 +389,7 @@ std::uint64_t VtkWriter<GridView>::writeAppended(std::ofstream& out, std::vector
 
 template <class GridView>
   template <class T>
-std::uint64_t VtkWriter<GridView>::writeDataAppended(std::ofstream& out, GlobalFunction const& fct, Vtk::PositionTypes type) const
+std::uint64_t VtkWriter<GridView>::writeDataAppended (std::ofstream& out, GlobalFunction const& fct, Vtk::PositionTypes type) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
@@ -404,7 +405,7 @@ std::uint64_t VtkWriter<GridView>::writeDataAppended(std::ofstream& out, GlobalF
 
 template <class GridView>
   template <class T>
-std::uint64_t VtkWriter<GridView>::writePointsAppended(std::ofstream& out) const
+std::uint64_t VtkWriter<GridView>::writePointsAppended (std::ofstream& out) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
@@ -414,7 +415,7 @@ std::uint64_t VtkWriter<GridView>::writePointsAppended(std::ofstream& out) const
 
 
 template <class GridView>
-std::array<std::uint64_t,3> VtkWriter<GridView>::writeCellsAppended(std::ofstream& out) const
+std::array<std::uint64_t,3> VtkWriter<GridView>::writeCellsAppended (std::ofstream& out) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
