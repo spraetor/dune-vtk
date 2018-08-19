@@ -31,6 +31,7 @@ std::map<std::string, DataTypes> Map::datatype = {
 
 
 CellType::CellType (GeometryType const& t)
+  : noPermutation_(true)
 {
   if (t.isVertex()) {
     type_ = 1;
@@ -55,14 +56,17 @@ CellType::CellType (GeometryType const& t)
   else if (t.isHexahedron()) {
     type_ = 12;
     permutation_ = {0,1,3,2,4,5,7,6};
+    noPermutation_ = false;
   }
   else if (t.isPrism()) {
     type_ = 13;
     permutation_ = {0,2,1,3,5,4};
+    noPermutation_ = false;
   }
   else if (t.isPyramid()) {
     type_ = 14;
     permutation_ = {0,1,3,2,4};
+    noPermutation_ = false;
   }
   else {
     std::cerr << "Geometry Type not supported by VTK!\n";

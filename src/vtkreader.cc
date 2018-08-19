@@ -67,15 +67,23 @@ int main(int argc, char** argv)
     vtkWriter.write("test_ascii_float64_3.vtu", Vtk::ASCII, Vtk::FLOAT64);
   }
 
-  // {
-  //   using GridType3d = UGGrid<3>;
-  //   using GridView3d = typename GridType3d::LeafGridView;
-  //   auto gridPtr = VtkReader<GridType3d>::read("paraview_3d.vtu");
-  //   auto& grid = *gridPtr;
+  {
+    auto gridPtr = VtkReader<GridType,ConnectedGridCreator>::read("test_ascii_float32.vtu");
+    auto& grid = *gridPtr;
 
-  //   VtkWriter<GridView3d> vtkWriter(grid.leafGridView());
-  //   vtkWriter.write("paraview_3d_ascii.vtu", Vtk::ASCII, Vtk::FLOAT64);
-  // }
+    VtkWriter<GridView> vtkWriter(grid.leafGridView());
+    vtkWriter.write("test_ascii_float32_4.vtu", Vtk::ASCII);
+  }
+
+  {
+    using GridType3d = UGGrid<3>;
+    using GridView3d = typename GridType3d::LeafGridView;
+    auto gridPtr = VtkReader<GridType3d>::read("paraview_3d.vtu");
+    auto& grid = *gridPtr;
+
+    VtkWriter<GridView3d> vtkWriter(grid.leafGridView());
+    vtkWriter.write("paraview_3d_ascii.vtu", Vtk::ASCII, Vtk::FLOAT64);
+  }
 
   // {
   //   std::cout << "paraview_2d_ascii...\n";

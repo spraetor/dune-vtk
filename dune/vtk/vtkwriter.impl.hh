@@ -165,9 +165,9 @@ std::vector<T> getVertexData (GridView const& gridView, GlobalFunction const& fc
     Vtk::CellType cellType{e.type()};
     auto refElem = referenceElement(e.geometry());
     for (int j = 0; j < e.subEntities(dim); ++j) {
-      std::size_t idx = fct.ncomps() * indexSet.subIndex(e,cellType.localIndex(j),dim);
+      std::size_t idx = fct.ncomps() * indexSet.subIndex(e,cellType.permutation(j),dim);
       for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(cellType.localIndex(j),dim)));
+        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(cellType.permutation(j),dim)));
     }
     localFct.unbind();
   }
@@ -254,7 +254,7 @@ void VtkWriter<GridView>::writeCells (std::ofstream& out, std::vector<pos_type>&
     for (auto const& c : elements(gridView_)) {
       auto cellType = getType(c.type());
       for (int j = 0; j < c.subEntities(dimension); ++j)
-        out << indexSet.subIndex(c,cellType.localIndex(j),dimension) << (++i % 6 != 0 ? ' ' : '\n');
+        out << indexSet.subIndex(c,cellType.permutation(j),dimension) << (++i % 6 != 0 ? ' ' : '\n');
     }
     out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
 
@@ -438,7 +438,7 @@ std::array<std::uint64_t,3> VtkWriter<GridView>::writeCellsAppended (std::ofstre
   for (auto const& c : elements(gridView_)) {
     auto cellType = getType(c.type());
     for (int j = 0; j < c.subEntities(dimension); ++j)
-      connectivity.push_back( std::int64_t(indexSet.subIndex(c,cellType.localIndex(j),dimension)) );
+      connectivity.push_back( std::int64_t(indexSet.subIndex(c,cellType.permutation(j),dimension)) );
     cell_offsets.push_back(old_o += c.subEntities(dimension));
     cell_types.push_back(cellType.type());
   }

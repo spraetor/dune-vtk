@@ -58,14 +58,20 @@ namespace Dune
       }
 
       /// Return a permutation of Dune elemenr vertices to conform to VTK element numbering
-      int localIndex (int idx) const
+      int permutation (int idx) const
       {
         return permutation_[idx];
+      }
+
+      bool noPermutation () const
+      {
+        return noPermutation_;
       }
 
     private:
       std::uint8_t type_;
       std::vector<int> permutation_;
+      bool noPermutation_;
     };
 
   } // end namespace Vtk

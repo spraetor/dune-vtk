@@ -14,8 +14,8 @@
 
 namespace Dune {
 
-template <class Grid>
-void VtkReader<Grid>::readFromFile (std::string const& filename)
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
 {
   // check whether file exists!
   if (!filesystem::exists(filename))
@@ -127,10 +127,8 @@ void VtkReader<Grid>::readFromFile (std::string const& filename)
         if (!closed) {
           while (std::getline(input, line)) {
             ltrim(line);
-            if (line.substr(1,10) == "/DataArray") {
-              // std::cout << "</DataArray>\n";
+            if (line.substr(1,10) == "/DataArray")
               break;
-            }
           }
         }
         continue;
@@ -249,9 +247,9 @@ Sections readDataArray (IStream& input, std::vector<T>& values, std::size_t max_
 // @}
 
 
-template <class Grid>
-typename VtkReader<Grid>::Sections
-VtkReader<Grid>::readPoints (std::ifstream& input)
+template <class Grid, class Creator>
+typename VtkReader<Grid,Creator>::Sections
+VtkReader<Grid,Creator>::readPoints (std::ifstream& input)
 {
   using T = typename GlobalCoordinate::value_type;
   assert(numberOfPoints_ > 0);
@@ -264,21 +262,22 @@ VtkReader<Grid>::readPoints (std::ifstream& input)
 
   // extract points from continuous values
   GlobalCoordinate p;
+  vec_points.reserve(numberOfPoints_);
   std::size_t idx = 0;
   for (std::size_t i = 0; i < numberOfPoints_; ++i) {
     for (std::size_t j = 0; j < p.size(); ++j)
       p[j] = point_values[idx++];
     idx += (3u - p.size());
-    factory_->insertVertex(p);
+    vec_points.push_back(p);
   }
 
   return sec;
 }
 
 
-template <class Grid>
+template <class Grid, class Creator>
   template <class T>
-void VtkReader<Grid>::readPointsAppended (std::ifstream& input)
+void VtkReader<Grid,Creator>::readPointsAppended (std::ifstream& input)
 {
   assert(numberOfPoints_ > 0);
   assert(dataArray_["points"].components == 3u);
@@ -289,20 +288,20 @@ void VtkReader<Grid>::readPointsAppended (std::ifstream& input)
 
   // extract points from continuous values
   GlobalCoordinate p;
+  vec_points.reserve(numberOfPoints_);
   std::size_t idx = 0;
   for (std::size_t i = 0; i < numberOfPoints_; ++i) {
     for (std::size_t j = 0; j < p.size(); ++j)
       p[j] = T(point_values[idx++]);
     idx += (3u - p.size());
-
-    factory_->insertVertex(p);
+    vec_points.push_back(p);
   }
 }
 
 
-template <class Grid>
-typename VtkReader<Grid>::Sections
-VtkReader<Grid>::readCells (std::ifstream& input, std::string name)
+template <class Grid, class Creator>
+typename VtkReader<Grid,Creator>::Sections
+VtkReader<Grid,Creator>::readCells (std::ifstream& input, std::string name)
 {
   Sections sec = CELLS_DATA_ARRAY;
 
@@ -327,8 +326,8 @@ VtkReader<Grid>::readCells (std::ifstream& input, std::string name)
 }
 
 
-template <class Grid>
-void VtkReader<Grid>::readCellsAppended (std::ifstream& input)
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::readCellsAppended (std::ifstream& input)
 {
   assert(numberOfCells_ > 0);
   auto types_data = dataArray_["types"];
@@ -384,9 +383,9 @@ void read_compressed (T* buffer, unsigned char* buffer_in,
 // @}
 
 
-template <class Grid>
+template <class Grid, class Creator>
   template <class T>
-void VtkReader<Grid>::readAppended (std::ifstream& input, std::vector<T>& values, std::uint64_t offset)
+void VtkReader<Grid,Creator>::readAppended (std::ifstream& input, std::vector<T>& values, std::uint64_t offset)
 {
   input.seekg(offset0_ + offset);
 
@@ -435,35 +434,19 @@ void VtkReader<Grid>::readAppended (std::ifstream& input, std::vector<T>& values
 }
 
 
-template <class Grid>
-void VtkReader<Grid>::createGrid () const
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::createGrid () const
 {
-  assert(vec_types.size() == vec_offsets.size());
-  std::size_t idx = 0;
-  for (std::size_t i = 0; i < vec_types.size(); ++i) {
-    if (Vtk::Map::type.count(vec_types[i]) == 0)
-      DUNE_THROW(Exception, "Unknown ElementType: " << vec_types[i]);
-    auto type = Vtk::Map::type[vec_types[i]];
-    Vtk::CellType cellType{type};
+  assert(vec_points.size() == numberOfPoints_);
+  assert(vec_types.size() == numberOfCells_);
+  assert(vec_offsets.size() == numberOfCells_);
 
-    std::size_t nNodes = vec_offsets[i] - (i == 0 ? 0 : vec_offsets[i-1]);
-    assert(nNodes > 0);
-    std::vector<unsigned int> vtk_cell; vtk_cell.reserve(nNodes);
-    for (std::size_t j = 0; j < nNodes; ++j)
-      vtk_cell.push_back( vec_connectivity[idx++] );
-
-    // apply index permutation
-    std::vector<unsigned int> cell(nNodes);
-    for (std::size_t j = 0; j < nNodes; ++j)
-      cell[j] = vtk_cell[cellType.localIndex(j)];
-
-    factory_->insertElement(type,cell);
-  }
+  Creator::create(*factory_, vec_points, vec_types, vec_offsets, vec_connectivity);
 }
 
-
-template <class Grid>
-std::uint64_t VtkReader<Grid>::findAppendedDataPosition (std::ifstream& input) const
+// Assume input already read the line <AppendedData ...>
+template <class Grid, class Creator>
+std::uint64_t VtkReader<Grid,Creator>::findAppendedDataPosition (std::ifstream& input) const
 {
   char c;
   while (input.get(c) && std::isblank(c)) { /*do nothing*/ }
@@ -476,8 +459,8 @@ std::uint64_t VtkReader<Grid>::findAppendedDataPosition (std::ifstream& input) c
 }
 
 
-template <class Grid>
-std::map<std::string, std::string> VtkReader<Grid>::parseXml (std::string const& line, bool& closed)
+template <class Grid, class Creator>
+std::map<std::string, std::string> VtkReader<Grid,Creator>::parseXml (std::string const& line, bool& closed)
 {
   closed = false;
   std::map<std::string, std::string> attr;

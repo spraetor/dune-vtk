@@ -4,6 +4,7 @@
 #include <map>
 
 #include "filereader.hh"
+#include "gridcreator.hh"
 #include "vtktypes.hh"
 
 namespace Dune
@@ -15,9 +16,9 @@ namespace Dune
    *
    * Assumption on the file structure: Each XML tag must be on a separate line.
    **/
-  template <class Grid>
+  template <class Grid, class GridCreator = DefaultGridCreator>
   class VtkReader
-      : public FileReader<Grid, VtkReader<Grid>>
+      : public FileReader<Grid, VtkReader<Grid, GridCreator>>
   {
     // Sections visited during the xml parsing
     enum Sections {
@@ -101,7 +102,8 @@ namespace Dune
     std::map<std::string, std::string> parseXml(std::string const& line, bool& closed);
 
     // Construct a grid using the GridFactory `factory` and the read vectors
-    // \ref vec_types, \ref vec_offsets, and \ref vec_connectivity
+    // \ref vec_points, \ref vec_types, \ref vec_offsets, and \ref vec_connectivity,
+    // by passing to \ref GridCreator.
     void createGrid() const;
 
   private:
@@ -111,6 +113,7 @@ namespace Dune
     Vtk::FormatTypes format_;
 
     // Temporary data to construct the grid elements
+    std::vector<GlobalCoordinate> vec_points;
     std::vector<std::uint8_t> vec_types; //< VTK cell type ID
     std::vector<std::int64_t> vec_offsets; //< offset of vertices of cell
     std::vector<std::int64_t> vec_connectivity; //< vertex indices of cell
