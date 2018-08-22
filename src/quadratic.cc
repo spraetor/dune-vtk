@@ -63,7 +63,7 @@ int main(int argc, char** argv)
   // write discrete global-basis function
   auto p1FctWrapped = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
 
-  using Writer = VtkWriter<GridView>;
+  using Writer = VtkWriter<GridView, QuadraticDataCollector<GridView>>;
   Writer vtkWriter(gridView);
   vtkWriter.addPointData(p1FctWrapped, "p1");
   vtkWriter.addCellData(p1FctWrapped, "p0");
@@ -75,10 +75,10 @@ int main(int argc, char** argv)
 
   vtkWriter.addPointData(p1Analytic, "analytic");
 
-  vtkWriter.write("test_ascii_float32.vtu", Vtk::ASCII);
-  vtkWriter.write("test_binary_float32.vtu", Vtk::BINARY);
-  vtkWriter.write("test_compressed_float32.vtu", Vtk::COMPRESSED);
-  vtkWriter.write("test_ascii_float64.vtu", Vtk::ASCII, Vtk::FLOAT64);
-  vtkWriter.write("test_binary_float64.vtu", Vtk::BINARY, Vtk::FLOAT64);
-  vtkWriter.write("test_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
+  vtkWriter.write("p2_ascii_float32.vtu", Vtk::ASCII);
+  vtkWriter.write("p2_binary_float32.vtu", Vtk::BINARY);
+  vtkWriter.write("p2_compressed_float32.vtu", Vtk::COMPRESSED);
+  vtkWriter.write("p2_ascii_float64.vtu", Vtk::ASCII, Vtk::FLOAT64);
+  vtkWriter.write("p2_binary_float64.vtu", Vtk::BINARY, Vtk::FLOAT64);
+  vtkWriter.write("p2_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
 }

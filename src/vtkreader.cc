@@ -19,6 +19,7 @@
 #include <dune/vtk/vtkwriter.hh>
 
 using namespace Dune;
+using namespace Dune::experimental;
 
 int main(int argc, char** argv)
 {

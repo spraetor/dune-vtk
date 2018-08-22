@@ -4,14 +4,15 @@
 #include <iosfwd>
 #include <map>
 
+#include "datacollector.hh"
 #include "filewriter.hh"
 #include "vtkfunction.hh"
 #include "vtktypes.hh"
 
-namespace Dune
+namespace Dune { namespace experimental
 {
   /// File-Writer for Vtk .vtu files
-  template <class GridView>
+  template <class GridView, class DataCollector = DefaultDataCollector<GridView>>
   class VtkWriter
       : public FileWriter
   {
@@ -21,10 +22,15 @@ namespace Dune
     using LocalFunction = VTKLocalFunction<GridView>;
     using pos_type = typename std::ostream::pos_type;
 
+    enum PositionTypes {
+      POINT_DATA,
+      CELL_DATA
+    };
+
   public:
     /// Constructor, stores the gridView
     VtkWriter (GridView const& gridView)
-      : gridView_(gridView)
+      : dataCollector_(gridView)
     {}
 
     /// Write the attached data to the file
@@ -38,13 +44,13 @@ namespace Dune
                         Vtk::FormatTypes format,
                         Vtk::DataTypes datatype = Vtk::FLOAT32);
 
-    /// Attach vertex data to the writer
+    /// Attach point data to the writer
     template <class GridViewFunction>
-    VtkWriter& addVertexData (GridViewFunction const& gridViewFct,
+    VtkWriter& addPointData (GridViewFunction const& gridViewFct,
                               std::string const& name = {},
                               int ncomps = 1)
     {
-      vertexData_.emplace_back(gridViewFct, name, ncomps);
+      pointData_.emplace_back(gridViewFct, name, ncomps);
       return *this;
     }
 
@@ -59,17 +65,17 @@ namespace Dune
     }
 
   private:
-    // Write \ref vertexData_ and \ref cellData_ with set \ref format_ and
+    // Write \ref pointData_ and \ref cellData_ with set \ref format_ and
     // \ref datatype_ to file given by filename
     void writeImpl (std::string const& filename) const;
 
-    // Write the vertex or cell values given by the grid function `fct` to the
+    // Write the point or cell values given by the grid function `fct` to the
     // output stream `out`. In case of binary format, stores the streampos of XML
     // attributes "offset" in the vector `offsets`.
     void writeData (std::ofstream& out,
                     std::vector<pos_type>& offsets,
                     GlobalFunction const& fct,
-                    Vtk::PositionTypes type) const;
+                    PositionTypes type) const;
 
     // Write the coordinates of the vertices to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
@@ -89,14 +95,14 @@ namespace Dune
     std::uint64_t writeAppended (std::ofstream& out,
                                  std::vector<T> const& values) const;
 
-    // Collect vertex or cell data (depending on \ref PositionTypes) and pass
+    // Collect point or cell data (depending on \ref PositionTypes) and pass
     // the resulting vector to \ref writeAppended.
     template <class T>
     std::uint64_t writeDataAppended (std::ofstream& out,
                                      GlobalFunction const& localFct,
-                                     Vtk::PositionTypes type) const;
+                                     PositionTypes type) const;
 
-    // Collect vertex positions and pass the resulting vector to \ref writeAppended.
+    // Collect point positions and pass the resulting vector to \ref writeAppended.
     template <class T>
     std::uint64_t writePointsAppended (std::ofstream& out) const;
 
@@ -111,26 +117,21 @@ namespace Dune
       return (reinterpret_cast<char*>(&i)[1] == 1 ? "BigEndian" : "LittleEndian");
     }
 
-    Vtk::CellType getType (GeometryType const& t) const
-    {
-      return {t};
-    }
-
   private:
-    GridView gridView_;
+    mutable DataCollector dataCollector_;
 
     std::string filename_;
     Vtk::FormatTypes format_;
     Vtk::DataTypes datatype_;
 
     // attached data
-    std::vector<GlobalFunction> vertexData_;
+    std::vector<GlobalFunction> pointData_;
     std::vector<GlobalFunction> cellData_;
 
     std::size_t const block_size = 1024*32;
     int compression_level = -1; // in [0,9], -1 ... use default value
   };
 
-} // end namespace Dune
+}} // end namespace Dune::experimental
 
 #include "vtkwriter.impl.hh"

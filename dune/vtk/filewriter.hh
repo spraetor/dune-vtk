@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace Dune
+namespace Dune { namespace experimental
 {
   class FileWriter
   {
@@ -14,4 +14,4 @@ namespace Dune
     virtual void write (std::string const& filename) = 0;
   };
 
-} // end namespace Dune
+}} // end namespace Dune::experimental

@@ -1,0 +1,115 @@
+// -*- tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+// vi: set et ts=4 sw=2 sts=2:
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <iostream>
+#include <vector>
+
+#include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
+#include <dune/common/exceptions.hh> // We use exceptions
+#include <dune/common/filledarray.hh>
+
+#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
+#include <dune/functions/functionspacebases/lagrangebasis.hh>
+#include <dune/functions/functionspacebases/interpolate.hh>
+#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
+#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
+#include <dune/grid/uggrid.hh>
+#include <dune/grid/yaspgrid.hh>
+
+#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkreader.hh>
+
+using namespace Dune;
+using namespace Dune::experimental;
+using namespace Dune::Functions;
+
+#define GRID_TYPE 2
+static const int dim = 3;
+#if GRID_TYPE == 1
+  using GridType = YaspGrid<dim>;
+#elif GRID_TYPE == 2
+  using GridType = UGGrid<dim>;
+#endif
+using GridViewType = typename GridType::LeafGridView;
+
+void write()
+{
+#if GRID_TYPE == 1
+  FieldVector<double,dim> upperRight; upperRight = 1.0;
+  auto numElements = filledArray<dim,int>(4);
+  GridType grid(upperRight,numElements);
+#elif GRID_TYPE == 2
+  FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
+  FieldVector<double,dim> upperRight; upperRight = 1.0;
+  auto numElements = filledArray<dim,unsigned int>(4);
+  auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
+  auto& grid = *gridPtr;
+#endif
+
+  GridViewType gridView = grid.leafGridView();
+
+  using namespace BasisFactory;
+  auto basis = makeBasis(gridView, lagrange<1>());
+
+  std::vector<double> p1function(basis.dimension());
+
+  interpolate(basis, p1function, [](auto const& x) {
+    return 100*x[0] + 10*x[1] + 1*x[2];
+  });
+
+  // write discrete global-basis function
+  auto p1FctWrapped = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
+  // write analytic function
+  auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
+    return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
+  }, gridView);
+
+
+  { // Default DataCollector
+    using Writer = VtkWriter<GridViewType>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(p1FctWrapped, "p1");
+    vtkWriter.addCellData(p1FctWrapped, "p0");
+    vtkWriter.addPointData(p1Analytic, "analytic");
+
+    vtkWriter.write("c_ascii_float32.vtu", Vtk::ASCII);
+    vtkWriter.write("c_binary_float32.vtu", Vtk::BINARY);
+    vtkWriter.write("c_compressed_float32.vtu", Vtk::COMPRESSED);
+    vtkWriter.write("c_ascii_float64.vtu", Vtk::ASCII, Vtk::FLOAT64);
+    vtkWriter.write("c_binary_float64.vtu", Vtk::BINARY, Vtk::FLOAT64);
+    vtkWriter.write("c_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
+  }
+
+  { // Discontinuous DataCollector
+    using Writer = VtkWriter<GridViewType, DiscontinuousDataCollector<GridViewType>>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(p1FctWrapped, "p1");
+    vtkWriter.addCellData(p1FctWrapped, "p0");
+    vtkWriter.addPointData(p1Analytic, "analytic");
+
+    vtkWriter.write("dc_ascii_float32.vtu", Vtk::ASCII);
+    vtkWriter.write("dc_binary_float32.vtu", Vtk::BINARY);
+    vtkWriter.write("dc_compressed_float32.vtu", Vtk::COMPRESSED);
+    vtkWriter.write("dc_ascii_float64.vtu", Vtk::ASCII, Vtk::FLOAT64);
+    vtkWriter.write("dc_binary_float64.vtu", Vtk::BINARY, Vtk::FLOAT64);
+    vtkWriter.write("dc_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
+  }
+}
+
+int main(int argc, char** argv)
+{
+  Dune::MPIHelper::instance(argc, argv);
+
+  write();
+  {
+    auto gridPtr = VtkReader<GridType, ConnectedGridCreator>::read("dc_ascii_float32.vtu");
+    auto& grid = *gridPtr;
+
+    VtkWriter<GridViewType> vtkWriter(grid.leafGridView());
+    vtkWriter.write("c_ascii_float32_2.vtu", Vtk::ASCII);
+  }
+}

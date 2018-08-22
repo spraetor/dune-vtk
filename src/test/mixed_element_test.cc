@@ -21,6 +21,7 @@
 #include <dune/vtk/vtkwriter.hh>
 
 using namespace Dune;
+using namespace Dune::experimental;
 
 // see https://stackoverflow.com/questions/6163611/compare-two-files
 bool compare_files (std::string const& fn1, std::string const& fn2)
@@ -85,7 +86,7 @@ void reader_test (Test& test)
     vtkWriter.write("/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu",
       std::get<1>(test_case), std::get<2>(test_case));
     test.check(compare_files("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu",
-                             "/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"));
+                             "/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"), std::get<0>(test_case));
   }
 }
 

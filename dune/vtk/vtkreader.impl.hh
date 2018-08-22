@@ -12,7 +12,7 @@
 #include "utility/filesystem.hh"
 #include "utility/string.hh"
 
-namespace Dune {
+namespace Dune { namespace experimental {
 
 template <class Grid, class Creator>
 void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
@@ -91,7 +91,7 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
       bool closed = false;
       auto attr = parseXml(line, closed);
 
-      data_type = Vtk::Map::datatype[attr["type"]];
+      data_type = Vtk::Map::to_datatype[attr["type"]];
 
       if (!attr["Name"].empty())
         data_name = to_lower(attr["Name"]);
@@ -512,4 +512,4 @@ std::map<std::string, std::string> VtkReader<Grid,Creator>::parseXml (std::strin
   return attr;
 }
 
-} // end namespace Dune
+}} // end namespace Dune::experimental

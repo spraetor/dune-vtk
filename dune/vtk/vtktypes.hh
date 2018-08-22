@@ -7,7 +7,7 @@
 
 #include <dune/geometry/type.hh>
 
-namespace Dune
+namespace Dune { namespace experimental
 {
   namespace Vtk
   {
@@ -28,20 +28,40 @@ namespace Dune
       FLOAT64 = 64
     };
 
-    enum PositionTypes {
-      VERTEX_DATA,
-      CELL_DATA
+    enum CellParametrization {
+      LINEAR,
+      QUADRATIC
     };
 
-    enum ContinuityTypes {
-      CONFORMING,
-      NONCONFORMING
+    enum CellTypes : std::uint8_t {
+      // Linear VTK cell types
+      VERTEX         = 1,
+      POLY_VERTEX    = 2, // not supported
+      LINE           = 3,
+      POLY_LINE      = 4, // not supported
+      TRIANGLE       = 5,
+      TRIANGLE_STRIP = 6, // not supported
+      POLYGON        = 7, // not supported
+      PIXEL          = 8, // not supported
+      QUAD           = 9,
+      TETRA          = 10,
+      VOXEL          = 11, // not supported
+      HEXAHEDRON     = 12,
+      WEDGE          = 13,
+      PYRAMID        = 14,
+      // Quadratic VTK cell types
+      QUADRATIC_EDGE       = 21,
+      QUADRATIC_TRIANGLE   = 22,
+      QUADRATIC_QUAD       = 23,
+      QUADRATIC_TETRA      = 24,
+      QUADRATIC_HEXAHEDRON = 25
     };
 
     struct Map
     {
-      static std::map<std::uint8_t, GeometryType> type; // VTK Cell type -> Dune::GeometryType
-      static std::map<std::string, DataTypes> datatype; // String -> DataTypes
+      static std::map<std::uint8_t, GeometryType> from_type; // VTK Cell type -> Dune::GeometryType
+      static std::map<std::string, DataTypes> to_datatype; // String -> DataTypes
+      static std::map<DataTypes, std::string> from_datatype; // DataTypes -> String
     };
 
 
@@ -49,7 +69,7 @@ namespace Dune
     class CellType
     {
     public:
-      CellType (GeometryType const& t);
+      CellType (GeometryType const& t, CellParametrization = LINEAR);
 
       /// Return VTK Cell type
       std::uint8_t type () const
@@ -75,4 +95,4 @@ namespace Dune
     };
 
   } // end namespace Vtk
-} // end namespace Dune
+}} // end namespace Dune::experimental

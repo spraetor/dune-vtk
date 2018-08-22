@@ -5,7 +5,7 @@
 #include <dune/common/std/type_traits.hh>
 #include <dune/functions/common/typeerasure.hh>
 
-namespace Dune
+namespace Dune { namespace experimental
 {
   /// An abstract base class for LocalFunctions
   template <class GridView>
@@ -69,7 +69,7 @@ namespace Dune
       double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
       {
         auto y = this->get()(xi);
-        return y[comp];
+        return comp < y.size() ? y[comp] : 0.0;
       }
 
       // Return the scalar values
@@ -128,7 +128,7 @@ namespace Dune
   {
   public:
     /// Create a local function
-    virtual VTKLocalFunction<GridView> makelocalFunction () const = 0;
+    virtual VTKLocalFunction<GridView> makeLocalFunction () const = 0;
 
     /// Virtual destructor
     virtual ~VTKFunctionInterface () = default;
@@ -143,12 +143,9 @@ namespace Dune
     {
     public:
       using Wrapper::Wrapper;
-      using Function = typename Wrapper::Wrapped;
-      using Interface = VTKFunctionInterface<GridView>;
-
-      virtual VTKLocalFunction<GridView> makelocalFunction () const override
+      virtual VTKLocalFunction<GridView> makeLocalFunction () const override
       {
-        return {localFunction(this->get())};
+        return VTKLocalFunction<GridView>{localFunction(this->get())};
       }
     };
   };
@@ -163,16 +160,17 @@ namespace Dune
                                              VTKFunctionImpl<GridView>::template Model>;
 
     template <class F>
-    using IsGridFunction = decltype(localFunction(std::declval<F>()));
+    using HasLocalFunction = decltype(localFunction(std::declval<F>()));
 
   public:
-    template <class F, disableCopyMove<VTKFunction, F> = 0>
+    template <class F>
     VTKFunction (F&& f, std::string name, int ncomps = 1)
       : Super(std::forward<F>(f))
       , name_(std::move(name))
-      , ncomps_(ncomps)
+      , ncomps_(ncomps > 1 ? 3 : 1)
     {
-      static_assert(Std::is_detected<IsGridFunction,F>::value,
+      assert(1 <= ncomps && ncomps <= 3);
+      static_assert(Std::is_detected<HasLocalFunction,F>::value,
         "Requires A GridFunction to be passed to the VTKFunction.");
     }
 
@@ -181,13 +179,7 @@ namespace Dune
     /// Create a LocalFunction
     friend VTKLocalFunction<GridView> localFunction (VTKFunction const& self)
     {
-      return self.asInterface().makelocalFunction();
-    }
-
-    /// Return the number of components of the Range
-    int ncomps () const
-    {
-      return ncomps_; // TODO: detect automatically. Is this always possible?
+      return self.asInterface().makeLocalFunction();
     }
 
     /// Return a name associated with the function
@@ -196,10 +188,16 @@ namespace Dune
       return name_;
     }
 
+    /// Return the number of components of the Range
+    int ncomps () const
+    {
+      return ncomps_;
+    }
+
   private:
     std::string name_;
 
     int ncomps_ = 1;
   };
 
-} // end namespace Dune
+}} // end namespace Dune::experimental
