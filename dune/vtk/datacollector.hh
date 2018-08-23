@@ -15,20 +15,32 @@ struct Cells
   std::vector<std::int64_t> connectivity;
 };
 
+template <class GridView, class Derived>
 class DataCollectorInterface
 {
-private:
-  DataCollectorInterface () = default;
-
 public:
+
+  DataCollectorInterface (GridView const& gridView)
+    : gridView_(gridView)
+  {}
+
   /// \brief Return the number of points in the grid
-  std::uint64_t numPoints () const;
+  std::uint64_t numPoints () const
+  {
+    return asDerived().numPointsImpl();
+  }
 
   /// \brief Return the number of cells in the grid
-  std::uint64_t numCells () const;
+  std::uint64_t numCells () const
+  {
+    return asDerived().numCellsImpl();
+  }
 
   /// Update the DataCollector on the current GridView
-  void update ();
+  void update ()
+  {
+    asDerived().updateImpl();
+  }
 
   /// \brief Return a flat vector of point coordinates
   /**
@@ -38,10 +50,16 @@ public:
    * set to 0
    **/
   template <class T>
-  std::vector<T> points () const;
+  std::vector<T> points () const
+  {
+    return asDerived().template pointsImpl<T>();
+  }
 
   /// \brief Return cell types, offsets, and connectivity. \see Cells
-  Cells cells () const;
+  Cells cells () const
+  {
+    return asDerived().cellsImpl();
+  }
 
   /// \brief Return a flat vector of function values evaluated at the grid points.
   /**
@@ -53,41 +71,93 @@ public:
    * where the tensor dimension must be 3x3 (possible extended by 0s)
    **/
   template <class T, class GlobalFunction>
-  std::vector<T> pointData (GlobalFunction const& fct) const;
+  std::vector<T> pointData (GlobalFunction const& fct) const
+  {
+    return asDerived().template pointDataImpl<T>(fct);
+  }
 
   /// \brief Return a flat vector of function values evaluated at the grid cells. \see pointData.
   template <class T, class GlobalFunction>
-  std::vector<T> cellData (GlobalFunction const& fct) const;
+  std::vector<T> cellData (GlobalFunction const& fct) const
+  {
+    return asDerived().template cellDataImpl<T>(fct);
+  }
+
+
+protected: // cast to derived type
+
+  Derived& asDerived ()
+  {
+    return static_cast<Derived&>(*this);
+  }
+
+  const Derived& asDerived () const
+  {
+    return static_cast<const Derived&>(*this);
+  }
+
+
+protected: // default implementations
+
+  std::uint64_t numCellsImpl () const
+  {
+    return gridView_.size(0);
+  }
+
+  void updateImpl () { /* do nothing */ }
+
+  // Evaluate `fct` in center of cell
+  template <class T, class GlobalFunction>
+  std::vector<T> cellDataImpl (GlobalFunction const& fct) const
+  {
+    std::vector<T> data(numCells() * fct.ncomps());
+    auto const& indexSet = gridView_.indexSet();
+    auto localFct = localFunction(fct);
+    for (auto const& e : elements(gridView_)) {
+      localFct.bind(e);
+      auto geometry = e.geometry();
+      std::size_t idx = fct.ncomps() * indexSet.index(e);
+      for (int comp = 0; comp < fct.ncomps(); ++comp)
+        data[idx + comp] = T(localFct.evaluate(comp, geometry.center()));
+      localFct.unbind();
+    }
+    return data;
+  }
+
+
+protected:
+
+  GridView gridView_;
 };
 
 
 /// Implementation of \ref DataCollector for linear cells, with continuous data.
 template <class GridView>
 class DefaultDataCollector
+    : public DataCollectorInterface<GridView, DefaultDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
+  using Self = DefaultDataCollector;
+  using Super = DataCollectorInterface<GridView, Self>;
+  using Super::gridView_;
+
 public:
   DefaultDataCollector (GridView const& gridView)
-    : gridView_(gridView)
+    : Super(gridView)
   {}
 
-  void update () {}
-
-  std::uint64_t numPoints () const
+  /// Return number of grid vertices
+  std::uint64_t numPointsImpl () const
   {
     return gridView_.size(dim);
   }
 
-  std::uint64_t numCells () const
-  {
-    return gridView_.size(0);
-  }
-
+  /// Return the coordinates of all grid vertices in the order given by the indexSet
   template <class T>
-  std::vector<T> points () const
+  std::vector<T> pointsImpl () const
   {
-    std::vector<T> data(numPoints() * 3);
+    std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
     for (auto const& vertex : vertices(gridView_)) {
       std::size_t idx = 3 * indexSet.index(vertex);
@@ -100,7 +170,9 @@ public:
     return data;
   }
 
-  Cells cells () const
+  /// Return the types, offsets and connectivity of the cells, using the same connectivity as
+  /// given by the grid.
+  Cells cellsImpl () const
   {
     auto const& indexSet = gridView_.indexSet();
     auto types = indexSet.types(0);
@@ -110,9 +182,9 @@ public:
     });
 
     Cells cells;
-    cells.connectivity.reserve(numCells() * maxVertices);
-    cells.offsets.reserve(numCells());
-    cells.types.reserve(numCells());
+    cells.connectivity.reserve(this->numCells() * maxVertices);
+    cells.offsets.reserve(this->numCells());
+    cells.types.reserve(this->numCells());
 
     std::int64_t old_o = 0;
     for (auto const& c : elements(gridView_)) {
@@ -126,10 +198,11 @@ public:
     return cells;
   }
 
+  /// Evaluate the `fct` at the corners of the elements
   template <class T, class GlobalFunction>
-  std::vector<T> pointData (GlobalFunction const& fct) const
+  std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    std::vector<T> data(numPoints() * fct.ncomps());
+    std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_)) {
@@ -145,41 +218,29 @@ public:
     }
     return data;
   }
-
-  template <class T, class GlobalFunction>
-  std::vector<T> cellData (GlobalFunction const& fct) const
-  {
-    std::vector<T> data(numCells() * fct.ncomps());
-    auto const& indexSet = gridView_.indexSet();
-    auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
-      localFct.bind(e);
-      auto refElem = referenceElement(e.geometry());
-      std::size_t idx = fct.ncomps() * indexSet.index(e);
-      for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
-      localFct.unbind();
-    }
-    return data;
-  }
-
-private:
-  GridView gridView_;
 };
 
 
 /// Implementation of \ref DataCollector for linear cells, with discontinuous data.
 template <class GridView>
 class DiscontinuousDataCollector
+    : public DataCollectorInterface<GridView, DiscontinuousDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
+  using Self = DiscontinuousDataCollector;
+  using Super = DataCollectorInterface<GridView, Self>;
+  using Super::gridView_;
+
 public:
   DiscontinuousDataCollector (GridView const& gridView)
-    : gridView_(gridView)
-  {}
+    : Super(gridView)
+  {
+    this->update();
+  }
 
-  void update ()
+  /// Create an index map the uniquely assignes an index to each pair (element,corner)
+  void updateImpl ()
   {
     numPoints_ = 0;
     indexMap_.resize(gridView_.size(dim));
@@ -192,20 +253,17 @@ public:
     }
   }
 
-  std::uint64_t numPoints () const
+  /// The number of pointsi approx. #cell * #corners-per-cell
+  std::uint64_t numPointsImpl () const
   {
     return numPoints_;
   }
 
-  std::uint64_t numCells () const
-  {
-    return gridView_.size(0);
-  }
-
+  /// Return the coordinates of the corners of all cells
   template <class T>
-  std::vector<T> points () const
+  std::vector<T> pointsImpl () const
   {
-    std::vector<T> data(numPoints() * 3);
+    std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
     for (auto const& element : elements(gridView_)) {
       for (int i = 0; i < element.subEntities(dim); ++i) {
@@ -220,12 +278,13 @@ public:
     return data;
   }
 
-  Cells cells () const
+  /// Connect the corners of each cell. The leads to a global discontinuous grid
+  Cells cellsImpl () const
   {
     Cells cells;
-    cells.connectivity.reserve(numPoints());
-    cells.offsets.reserve(numCells());
-    cells.types.reserve(numCells());
+    cells.connectivity.reserve(this->numPoints());
+    cells.offsets.reserve(this->numCells());
+    cells.types.reserve(this->numCells());
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
@@ -242,10 +301,11 @@ public:
     return cells;
   }
 
+  /// Evaluate the `fct` in the corners of each cell
   template <class T, class GlobalFunction>
-  std::vector<T> pointData (GlobalFunction const& fct) const
+  std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    std::vector<T> data(numPoints() * fct.ncomps());
+    std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_)) {
@@ -262,25 +322,7 @@ public:
     return data;
   }
 
-  template <class T, class GlobalFunction>
-  std::vector<T> cellData (GlobalFunction const& fct) const
-  {
-    std::vector<T> data(numCells() * fct.ncomps());
-    auto const& indexSet = gridView_.indexSet();
-    auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
-      localFct.bind(e);
-      auto refElem = referenceElement(e.geometry());
-      std::size_t idx = fct.ncomps() * indexSet.index(e);
-      for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
-      localFct.unbind();
-    }
-    return data;
-  }
-
 private:
-  GridView gridView_;
   std::uint64_t numPoints_ = 0;
   std::vector<std::int64_t> indexMap_;
 };
@@ -289,30 +331,34 @@ private:
 /// Implementation of \ref DataCollector for quadratic cells, with continuous data.
 template <class GridView>
 class QuadraticDataCollector
+    : public DataCollectorInterface<GridView, QuadraticDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
+  using Self = QuadraticDataCollector;
+  using Super = DataCollectorInterface<GridView, Self>;
+  using Super::gridView_;
+
 public:
   QuadraticDataCollector (GridView const& gridView)
-    : gridView_(gridView)
+    : Super(gridView)
   {}
 
-  void update () {}
-
-  std::uint64_t numPoints () const
+  /// Return number of vertices + number of edge
+  std::uint64_t numPointsImpl () const
   {
     return gridView_.size(dim) + gridView_.size(dim-1);
   }
 
-  std::uint64_t numCells () const
-  {
-    return gridView_.size(0);
-  }
-
+  /// Return a vector of point coordinates.
+  /**
+   * The vector of point coordinates is composed of vertex coordinates first and second
+   * edge center coordinates.
+   **/
   template <class T>
-  std::vector<T> points () const
+  std::vector<T> pointsImpl () const
   {
-    std::vector<T> data(numPoints() * 3);
+    std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
     for (auto const& element : elements(gridView_)) {
       auto geometry = element.geometry();
@@ -340,12 +386,17 @@ public:
     return data;
   }
 
-  Cells cells () const
+  /// \brief Return cell types, offsets, and connectivity. \see Cells
+  /**
+   * The cell connectivity is composed of cell vertices first and second cell edges,
+   * where the indices are grouped [vertex-indices..., (#vertices)+edge-indices...]
+   **/
+  Cells cellsImpl () const
   {
     Cells cells;
-    cells.connectivity.reserve(numPoints());
-    cells.offsets.reserve(numCells());
-    cells.types.reserve(numCells());
+    cells.connectivity.reserve(this->numPoints());
+    cells.offsets.reserve(this->numCells());
+    cells.types.reserve(this->numCells());
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
@@ -368,10 +419,11 @@ public:
     return cells;
   }
 
+  /// Evaluate the `fct` at element vertices and edge centers in the same order as the point coords.
   template <class T, class GlobalFunction>
-  std::vector<T> pointData (GlobalFunction const& fct) const
+  std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    std::vector<T> data(numPoints() * fct.ncomps());
+    std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_)) {
@@ -394,26 +446,6 @@ public:
     }
     return data;
   }
-
-  template <class T, class GlobalFunction>
-  std::vector<T> cellData (GlobalFunction const& fct) const
-  {
-    std::vector<T> data(numCells() * fct.ncomps());
-    auto const& indexSet = gridView_.indexSet();
-    auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
-      localFct.bind(e);
-      auto refElem = referenceElement(e.geometry());
-      std::size_t idx = fct.ncomps() * indexSet.index(e);
-      for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
-      localFct.unbind();
-    }
-    return data;
-  }
-
-private:
-  GridView gridView_;
 };
 
 }} // end namespace Dune::experimental
