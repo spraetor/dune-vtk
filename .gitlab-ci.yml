@@ -1,0 +1,7 @@
+---
+dune:git--gcc:
+  image: mathiwr/dune:latest
+  script:
+  - dunecontrol --current all
+  - dunecontrol --current make build_tests
+  - dunecontrol --current make test
