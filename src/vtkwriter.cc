@@ -20,13 +20,13 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
 using namespace Dune::Functions;
 
-#define GRID_TYPE 2
+#define GRID_TYPE 1
 
 int main(int argc, char** argv)
 {
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 #if GRID_TYPE == 1
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(4);
+  auto numElements = filledArray<dim,int>(8);
   GridType grid(upperRight,numElements);
 #elif GRID_TYPE == 2
   using GridType = UGGrid<dim>;
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
   // write discrete global-basis function
   auto p1FctWrapped = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
 
-  using Writer = VtkWriter<GridView>;
+  using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView);
   vtkWriter.addPointData(p1FctWrapped, "p1");
   vtkWriter.addCellData(p1FctWrapped, "p0");

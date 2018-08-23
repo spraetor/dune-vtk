@@ -18,7 +18,7 @@
 #include <dune/grid/utility/structuredgridfactory.hh>
 
 #include <dune/vtk/vtkreader.hh>
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
@@ -70,7 +70,7 @@ static TestCases test_cases = {
 template <class GridView>
 void writer_test (GridView const& gridView)
 {
-  VtkWriter<GridView> vtkWriter(gridView);
+  VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
   for (auto const& test_case : test_cases) {
     vtkWriter.write("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu",
       std::get<1>(test_case), std::get<2>(test_case));
@@ -82,7 +82,7 @@ void reader_test (Test& test)
 {
   for (auto const& test_case : test_cases) {
     auto grid = VtkReader<Grid>::read("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu");
-    VtkWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView());
+    VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView());
     vtkWriter.write("/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu",
       std::get<1>(test_case), std::get<2>(test_case));
     test.check(compare_files("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu",

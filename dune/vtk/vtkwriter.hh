@@ -12,10 +12,11 @@
 namespace Dune { namespace experimental
 {
   /// File-Writer for Vtk .vtu files
-  template <class GridView, class DataCollector = DefaultDataCollector<GridView>>
+  template <class GridView, class DataCollector>
   class VtkWriter
       : public FileWriter
   {
+  protected:
     static constexpr int dimension = GridView::dimension;
 
     using GlobalFunction = VTKFunction<GridView>;
@@ -40,9 +41,9 @@ namespace Dune { namespace experimental
     }
 
     /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    virtual void write (std::string const& fn,
-                        Vtk::FormatTypes format,
-                        Vtk::DataTypes datatype = Vtk::FLOAT32);
+    void write (std::string const& fn,
+                Vtk::FormatTypes format,
+                Vtk::DataTypes datatype = Vtk::FLOAT32);
 
     /// Attach point data to the writer
     template <class GridViewFunction>
@@ -64,10 +65,17 @@ namespace Dune { namespace experimental
       return *this;
     }
 
-  private:
-    // Write \ref pointData_ and \ref cellData_ with set \ref format_ and
-    // \ref datatype_ to file given by filename
-    void writeImpl (std::string const& filename) const;
+  protected:
+    /// Write a serial VTK file in Unstructured format
+    virtual void writeSerialFile (std::string const& filename) const = 0;
+
+    /// Write a parallel VTK file `pfilename.pvtu` in Unstructured format,
+    /// with `size` the number of pieces and serial files given by `pfilename_p[i].vtu`
+    /// for [i] in [0,...,size).
+    virtual void writeParallelFile (std::string const& pfilename, int size) const = 0;
+
+    /// Return the file extension of the serial file (not including the dot)
+    virtual std::string fileExtension () const = 0;
 
     // Write the point or cell values given by the grid function `fct` to the
     // output stream `out`. In case of binary format, stores the streampos of XML
@@ -89,12 +97,6 @@ namespace Dune { namespace experimental
     void writeCells (std::ofstream& oust,
                      std::vector<pos_type>& offsets) const;
 
-    // Write the `values` in blocks (possibly compressed) to the output
-    // stream `out`. Return the written block size.
-    template <class T>
-    std::uint64_t writeAppended (std::ofstream& out,
-                                 std::vector<T> const& values) const;
-
     // Collect point or cell data (depending on \ref PositionTypes) and pass
     // the resulting vector to \ref writeAppended.
     template <class T>
@@ -110,6 +112,11 @@ namespace Dune { namespace experimental
     // resulting vectors to \ref writeAppended.
     std::array<std::uint64_t,3> writeCellsAppended (std::ofstream& out) const;
 
+    // Write the `values` in blocks (possibly compressed) to the output
+    // stream `out`. Return the written block size.
+    template <class T>
+    std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
+
     // Returns endianness
     std::string getEndian () const
     {
@@ -117,7 +124,7 @@ namespace Dune { namespace experimental
       return (reinterpret_cast<char*>(&i)[1] == 1 ? "BigEndian" : "LittleEndian");
     }
 
-  private:
+  protected:
     mutable DataCollector dataCollector_;
 
     std::string filename_;

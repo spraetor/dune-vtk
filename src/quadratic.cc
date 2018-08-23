@@ -20,7 +20,8 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/datacollectors/quadraticdatacollector.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
@@ -63,7 +64,7 @@ int main(int argc, char** argv)
   // write discrete global-basis function
   auto p1FctWrapped = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
 
-  using Writer = VtkWriter<GridView, QuadraticDataCollector<GridView>>;
+  using Writer = VtkUnstructuredGridWriter<GridView, QuadraticDataCollector<GridView>>;
   Writer vtkWriter(gridView);
   vtkWriter.addPointData(p1FctWrapped, "p1");
   vtkWriter.addCellData(p1FctWrapped, "p0");

@@ -16,7 +16,7 @@
 #include <dune/grid/utility/structuredgridfactory.hh>
 
 #include <dune/vtk/vtkreader.hh>
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 
     GridView gridView = grid.leafGridView();
 
-    VtkWriter<GridView> vtkWriter(gridView);
+    VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
     vtkWriter.write("test_ascii_float32.vtu", Vtk::ASCII);
     vtkWriter.write("test_binary_float32.vtu", Vtk::BINARY);
     vtkWriter.write("test_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType>::read("test_ascii_float32.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView> vtkWriter(grid.leafGridView());
     vtkWriter.write("test_ascii_float32_2.vtu", Vtk::ASCII);
   }
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType>::read("test_binary_float32.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView> vtkWriter(grid.leafGridView());
     vtkWriter.write("test_ascii_float32_3.vtu", Vtk::ASCII);
   }
 
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType>::read("test_compressed_float64.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView> vtkWriter(grid.leafGridView());
     vtkWriter.write("test_ascii_float64_3.vtu", Vtk::ASCII, Vtk::FLOAT64);
   }
 
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType,ConnectedGridCreator>::read("test_ascii_float32.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView> vtkWriter(grid.leafGridView());
     vtkWriter.write("test_ascii_float32_4.vtu", Vtk::ASCII);
   }
 
@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType3d>::read("paraview_3d.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView3d> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView3d> vtkWriter(grid.leafGridView());
     vtkWriter.write("paraview_3d_ascii.vtu", Vtk::ASCII, Vtk::FLOAT64);
   }
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType2d>::read("paraview_2d.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridView2d> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridView2d> vtkWriter(grid.leafGridView());
     vtkWriter.write("paraview_2d_ascii.vtu", Vtk::ASCII, Vtk::FLOAT64);
   }
 }

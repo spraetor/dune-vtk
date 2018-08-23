@@ -127,5 +127,8 @@ namespace Dune
     /// Returns the current path
     path current_path();
 
+    /// Find the path of `a` relative to directory of `b`
+    path relative(path const& a, path const& b);
+
   } // end namespace filesystem
 } // end namespace Dune

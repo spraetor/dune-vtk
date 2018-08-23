@@ -20,8 +20,9 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 #include <dune/vtk/vtkreader.hh>
+#include <dune/vtk/datacollectors/discontinuousdatacollector.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
@@ -70,7 +71,7 @@ void write()
 
 
   { // Default DataCollector
-    using Writer = VtkWriter<GridViewType>;
+    using Writer = VtkUnstructuredGridWriter<GridViewType>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(p1FctWrapped, "p1");
     vtkWriter.addCellData(p1FctWrapped, "p0");
@@ -85,7 +86,7 @@ void write()
   }
 
   { // Discontinuous DataCollector
-    using Writer = VtkWriter<GridViewType, DiscontinuousDataCollector<GridViewType>>;
+    using Writer = VtkUnstructuredGridWriter<GridViewType, DiscontinuousDataCollector<GridViewType>>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(p1FctWrapped, "p1");
     vtkWriter.addCellData(p1FctWrapped, "p0");
@@ -109,7 +110,7 @@ int main(int argc, char** argv)
     auto gridPtr = VtkReader<GridType, ConnectedGridCreator>::read("dc_ascii_float32.vtu");
     auto& grid = *gridPtr;
 
-    VtkWriter<GridViewType> vtkWriter(grid.leafGridView());
+    VtkUnstructuredGridWriter<GridViewType> vtkWriter(grid.leafGridView());
     vtkWriter.write("c_ascii_float32_2.vtu", Vtk::ASCII);
   }
 }

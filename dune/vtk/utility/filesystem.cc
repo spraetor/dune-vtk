@@ -169,4 +169,22 @@ bool create_directories(path const& p)
   }
 }
 
+path relative(path const& a, path const& b)
+{
+  // find common base path
+  auto a_it = a.begin();
+  auto b_it = b.begin();
+  for (; a_it != a.end() && b_it != b.end(); ++a_it, ++b_it) {
+    if (*a_it != *b_it)
+      break;
+  }
+
+  // combine remaining parts of a to result path
+  path rel(*a_it++);
+  for (; a_it != a.end(); ++a_it)
+    rel /= *a_it;
+
+  return rel;
+}
+
 } } // end namespace Dec

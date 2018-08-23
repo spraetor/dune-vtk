@@ -21,7 +21,8 @@
 namespace Dune { namespace experimental {
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
+void VtkWriter<GV,DC>
+  ::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
 {
   format_ = format;
   datatype_ = datatype;
@@ -33,124 +34,34 @@ void VtkWriter<GV,DC>::write (std::string const& fn, Vtk::FormatTypes format, Vt
   }
 #endif
 
-  std::string filename = fn;
+  auto p = filesystem::path(fn);
+  auto name = p.stem();
+  p.remove_filename();
+  p /= name.string();
 
-#ifdef DUNE_HAS_MPI
+  std::string filename = p.string() + "." + fileExtension();
+
+#ifdef HAVE_MPI
   int rank = -1;
   int num_ranks = -1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   if (num_ranks > 1) {
-    auto p = filesystem::path(fn);
-    auto name = p.stem();
-    p.remove_filename();
-    p /= name.string() + "_p" + std::to_string(rank) + ".vtu";
-    filename = p.string();
+    filename = p.string() + "_p" + std::to_string(rank) + "." + fileExtension();
+
+    if (rank == 0) {
+      writeParallelFile(p.string(), num_ranks);
+    }
   }
 #endif
-  writeImpl(filename);
+  writeSerialFile(filename);
 }
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>::writeImpl (std::string const& filename) const
-{
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  if (format_ == Vtk::ASCII) {
-    if (datatype_ == Vtk::FLOAT32)
-      out << std::setprecision(std::numeric_limits<float>::digits10+2);
-    else
-      out << std::setprecision(std::numeric_limits<double>::digits10+2);
-  }
-
-  dataCollector_.update();
-
-  std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" "
-      << "byte_order=\"" << getEndian() << "\" header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\">\n" : ">\n");
-  out << "<UnstructuredGrid>\n";
-  out << "<Piece NumberOfPoints=\"" << dataCollector_.numPoints() << "\" "
-      << "NumberOfCells=\"" << dataCollector_.numCells() << "\">\n";
-
-  { // Write data associated with grid points
-    auto scalar = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<PointData" << (scalar != pointData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                        << (vector != pointData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                        << ">\n";
-    for (auto const& v : pointData_)
-      writeData(out, offsets, v, POINT_DATA);
-    out << "</PointData>\n";
-  }
-
-  { // Write data associated with grid cells
-    auto scalar = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<CellData" << (scalar != cellData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                       << (vector != cellData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                       << ">\n";
-    for (auto const& v : cellData_)
-      writeData(out, offsets, v, CELL_DATA);
-    out << "</CellData>\n";
-  }
-
-  // Write point coordinates
-  out << "<Points>\n";
-  writePoints(out, offsets);
-  out << "</Points>\n";
-
-  // Write element connectivity, types and offsets
-  out << "<Cells>\n";
-  writeCells(out, offsets);
-  out << "</Cells>\n";
-
-  out << "</Piece>\n";
-  out << "</UnstructuredGrid>\n";
-
-  std::vector<std::uint64_t> blocks; // size of i'th appended block
-  pos_type appended_pos = 0;
-  if (is_a(format_, Vtk::APPENDED)) {
-    out << "<AppendedData encoding=\"raw\">\n_";
-    appended_pos = out.tellp();
-    for (auto const& v : pointData_) {
-      if (datatype_ == Vtk::FLOAT32)
-        blocks.push_back( writeDataAppended<float>(out, v, POINT_DATA) );
-      else
-        blocks.push_back( writeDataAppended<double>(out, v, POINT_DATA) );
-    }
-    for (auto const& v : cellData_) {
-      if (datatype_ == Vtk::FLOAT32)
-        blocks.push_back( writeDataAppended<float>(out, v, CELL_DATA) );
-      else
-        blocks.push_back( writeDataAppended<double>(out, v, CELL_DATA) );
-    }
-    if (datatype_ == Vtk::FLOAT32)
-      blocks.push_back( writePointsAppended<float>(out) );
-    else
-      blocks.push_back( writePointsAppended<double>(out) );
-    auto bs = writeCellsAppended(out);
-    blocks.insert(blocks.end(), bs.begin(), bs.end());
-    out << "</AppendedData>\n";
-  }
-
-  out << "</VTKFile>";
-
-  // fillin offset values and block sizes
-  if (is_a(format_, Vtk::APPENDED)) {
-    pos_type offset = 0;
-    for (std::size_t i = 0; i < offsets.size(); ++i) {
-      out.seekp(offsets[i]);
-      out << '"' << offset << '"';
-      offset += pos_type(blocks[i]);
-    }
-  }
-}
-
-
-template <class GV, class DC>
-void VtkWriter<GV,DC>::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
-                                     GlobalFunction const& fct, PositionTypes type) const
+void VtkWriter<GV,DC>
+  ::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
+               GlobalFunction const& fct, PositionTypes type) const
 {
   out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
       << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
@@ -177,7 +88,8 @@ void VtkWriter<GV,DC>::writeData (std::ofstream& out, std::vector<pos_type>& off
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
+void VtkWriter<GV,DC>
+  ::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   out << "<DataArray type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
       << " NumberOfComponents=\"3\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
@@ -198,7 +110,8 @@ void VtkWriter<GV,DC>::writePoints (std::ofstream& out, std::vector<pos_type>& o
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
+void VtkWriter<GV,DC>
+  ::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   if (format_ == Vtk::ASCII) {
     auto cells = dataCollector_.cells();
@@ -239,6 +152,52 @@ void VtkWriter<GV,DC>::writeCells (std::ofstream& out, std::vector<pos_type>& of
     out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
     out << "/>\n";
   }
+}
+
+
+template <class GV, class DC>
+  template <class T>
+std::uint64_t VtkWriter<GV,DC>
+  ::writeDataAppended (std::ofstream& out, GlobalFunction const& fct, PositionTypes type) const
+{
+  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+
+  if (type == POINT_DATA) {
+    auto data = dataCollector_.template pointData<T>(fct);
+    return this->writeAppended(out, data);
+  } else {
+    auto data = dataCollector_.template cellData<T>(fct);
+    return this->writeAppended(out, data);
+  }
+}
+
+
+template <class GV, class DC>
+  template <class T>
+std::uint64_t VtkWriter<GV,DC>
+  ::writePointsAppended (std::ofstream& out) const
+{
+  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+
+  auto points = dataCollector_.template points<T>();
+  return this->writeAppended(out, points);
+}
+
+
+template <class GV, class DC>
+std::array<std::uint64_t,3> VtkWriter<GV,DC>
+  ::writeCellsAppended (std::ofstream& out) const
+{
+  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+
+  auto cells = dataCollector_.cells();
+
+  // write conncetivity, offsets, and types
+  std::uint64_t bs0 = this->writeAppended(out, cells.connectivity);
+  std::uint64_t bs1 = this->writeAppended(out, cells.offsets);
+  std::uint64_t bs2 = this->writeAppended(out, cells.types);
+
+  return {bs0, bs1, bs2};
 }
 
 
@@ -283,10 +242,10 @@ std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffe
 
 } // end namespace Impl
 
-
 template <class GV, class DC>
   template <class T>
-std::uint64_t VtkWriter<GV,DC>::writeAppended (std::ofstream& out, std::vector<T> const& values) const
+std::uint64_t VtkWriter<GV,DC>
+  ::writeAppended (std::ofstream& out, std::vector<T> const& values) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
   pos_type begin_pos = out.tellp();
@@ -334,49 +293,6 @@ std::uint64_t VtkWriter<GV,DC>::writeAppended (std::ofstream& out, std::vector<T
   }
 
   return std::uint64_t(end_pos - begin_pos);
-}
-
-
-template <class GV, class DC>
-  template <class T>
-std::uint64_t VtkWriter<GV,DC>::writeDataAppended (std::ofstream& out, GlobalFunction const& fct, PositionTypes type) const
-{
-  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
-
-  if (type == POINT_DATA) {
-    auto data = dataCollector_.template pointData<T>(fct);
-    return writeAppended(out, data);
-  } else {
-    auto data = dataCollector_.template cellData<T>(fct);
-    return writeAppended(out, data);
-  }
-}
-
-
-template <class GV, class DC>
-  template <class T>
-std::uint64_t VtkWriter<GV,DC>::writePointsAppended (std::ofstream& out) const
-{
-  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
-
-  auto points = dataCollector_.template points<T>();
-  return writeAppended(out, points);
-}
-
-
-template <class GV, class DC>
-std::array<std::uint64_t,3> VtkWriter<GV,DC>::writeCellsAppended (std::ofstream& out) const
-{
-  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
-
-  auto cells = dataCollector_.cells();
-
-  // write conncetivity, offsets, and types
-  std::uint64_t bs0 = writeAppended(out, cells.connectivity);
-  std::uint64_t bs1 = writeAppended(out, cells.offsets);
-  std::uint64_t bs2 = writeAppended(out, cells.types);
-
-  return {bs0, bs1, bs2};
 }
 
 }} // end namespace Dune::experimental

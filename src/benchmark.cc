@@ -19,7 +19,7 @@
 #include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 
@@ -61,7 +61,7 @@ template <class GridView>
 void writer_new (GridView const& gridView)
 {
   Timer t;
-  experimental::VtkWriter<GridView> vtkWriter(gridView);
+  experimental::VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
   for (auto const& test_case : test_cases_new) {
     t.reset();
     vtkWriter.write("/tmp/writer_new_" + std::get<0>(test_case) + ".vtu",
