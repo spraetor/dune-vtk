@@ -21,7 +21,7 @@
 #include <dune/polygongrid/grid.hh>
 #include <dune/polygongrid/gridfactory.hh>
 
-#include <dune/vtk/vtkwriter.hh>
+#include <dune/vtk/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
@@ -57,7 +57,7 @@ int main(int argc, char** argv)
   using GridView = typename GridType::LeafGridView;
   GridView gridView = gridPtr->leafGridView();
 
-  using Writer = VtkWriter<GridView>;
+  using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView);
   auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
     return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
