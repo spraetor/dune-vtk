@@ -34,7 +34,7 @@ namespace Impl_
   template <class GridView, class Grid>
   struct StructuredDataCollector;
 
-#ifdef HAVE_DUNE_SPGRID
+#if HAVE_DUNE_SPGRID
   template<class GridView, class ct, int dim, template< int > class Ref, class Comm>
   struct StructuredDataCollector<GridView, SPGrid<ct,dim,Ref,Comm>>
   {
@@ -105,7 +105,7 @@ void write_yaspgrid(std::integral_constant<int,dim>)
 template <int dim>
 void write_spgrid(std::integral_constant<int,dim>)
 {
-#ifdef HAVE_DUNE_SPGRID
+#if HAVE_DUNE_SPGRID
   using GridType = SPGrid<double,dim, SPIsotropicRefinement>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
   auto numElements = filledArray<dim,int>(8);

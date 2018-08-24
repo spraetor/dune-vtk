@@ -1,13 +1,13 @@
 #pragma once
 
-#ifdef HAVE_DUNE_SPGRID
+#if HAVE_DUNE_SPGRID
 #include <dune/grid/spgrid.hh>
 #endif
 #include <dune/vtk/datacollectors/structureddatacollector.hh>
 
 namespace Dune { namespace experimental
 {
-#ifdef HAVE_DUNE_SPGRID
+#if HAVE_DUNE_SPGRID
 
 // Specialization for SPGrid
 template <class GridView>
