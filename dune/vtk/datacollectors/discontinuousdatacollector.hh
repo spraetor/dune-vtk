@@ -30,7 +30,7 @@ public:
     indexMap_.resize(gridView_.size(dim));
     std::int64_t vertex_idx = 0;
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& c : elements(gridView_)) {
+    for (auto const& c : elements(gridView_, Partitions::interior)) {
       numPoints_ += c.subEntities(dim);
       for (int i = 0; i < c.subEntities(dim); ++i)
         indexMap_[indexSet.subIndex(c, i, dim)] = vertex_idx++;
@@ -49,7 +49,7 @@ public:
   {
     std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& element : elements(gridView_)) {
+    for (auto const& element : elements(gridView_, Partitions::interior)) {
       for (int i = 0; i < element.subEntities(dim); ++i) {
         std::size_t idx = 3 * indexMap_[indexSet.subIndex(element, i, dim)];
         auto v = element.geometry().corner(i);
@@ -72,7 +72,7 @@ public:
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& c : elements(gridView_)) {
+    for (auto const& c : elements(gridView_, Partitions::interior)) {
       Vtk::CellType cellType(c.type());
       for (int j = 0; j < c.subEntities(dim); ++j) {
         std::int64_t vertex_idx = indexMap_[indexSet.subIndex(c,cellType.permutation(j),dim)];
@@ -92,7 +92,7 @@ public:
     std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
+    for (auto const& e : elements(gridView_, Partitions::interior)) {
       localFct.bind(e);
       Vtk::CellType cellType{e.type()};
       auto refElem = referenceElement(e.geometry());

@@ -113,7 +113,7 @@ protected: // default implementations
     std::vector<T> data(numCells() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
+    for (auto const& e : elements(gridView_, Partitions::all)) {
       localFct.bind(e);
       auto geometry = e.geometry();
       std::size_t idx = fct.ncomps() * indexSet.index(e);

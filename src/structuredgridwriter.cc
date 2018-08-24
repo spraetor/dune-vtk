@@ -22,78 +22,106 @@
 
 #include <dune/vtk/vtkstructuredgridwriter.hh>
 #include <dune/vtk/vtkimagedatawriter.hh>
+#include <dune/vtk/datacollectors/yaspdatacollector.hh>
+#include <dune/vtk/datacollectors/spdatacollector.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;
 using namespace Dune::Functions;
 
-#define GRID_TYPE 1
+namespace Impl_
+{
+  template <class GridView, class Grid>
+  struct StructuredDataCollector;
+
+#ifdef HAVE_DUNE_SPGRID
+  template<class GridView, class ct, int dim, template< int > class Ref, class Comm>
+  struct StructuredDataCollector<GridView, SPGrid<ct,dim,Ref,Comm>>
+  {
+    using type = SPDataCollector<GridView>;
+  };
+#endif
+
+  template<class GridView, int dim, class Coordinates>
+  struct StructuredDataCollector<GridView, YaspGrid<dim,Coordinates>>
+  {
+    using type = YaspDataCollector<GridView>;
+  };
+}
+
+template <class GridView>
+using StructuredDataCollector = typename Impl_::StructuredDataCollector<GridView, typename GridView::Grid>::type;
+
+
+template <int dim>
+using int_ = std::integral_constant<int,dim>;
+
+template <class GridView>
+void write(std::string prefix, GridView const& gridView)
+{
+  using namespace BasisFactory;
+  auto basis = makeBasis(gridView, lagrange<1>());
+
+  std::vector<double> p1function(basis.dimension());
+  interpolate(basis, p1function, [](auto const& x) {
+    return 100*x[0] + 10*x[1] + 1*x[2];
+  });
+
+  auto fct1 = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
+  auto fct2 = makeAnalyticGridViewFunction([](auto const& x) {
+    return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
+  }, gridView);
+
+  {
+    using Writer = VtkStructuredGridWriter<GridView, StructuredDataCollector<GridView>>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(fct1, "p1");
+    vtkWriter.addCellData(fct1, "p0");
+    vtkWriter.addPointData(fct2, "analytic");
+    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII);
+  }
+
+  {
+    using Writer = VtkImageDataWriter<GridView, StructuredDataCollector<GridView>>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(fct1, "p1");
+    vtkWriter.addCellData(fct1, "p0");
+    vtkWriter.addPointData(fct2, "analytic");
+    vtkWriter.write(prefix + "id_ascii_float32.vti", Vtk::ASCII);
+  }
+}
+
+template <int dim>
+void write_yaspgrid(std::integral_constant<int,dim>)
+{
+  using GridType = YaspGrid<dim>;
+  FieldVector<double,dim> upperRight; upperRight = 1.0;
+  auto numElements = filledArray<dim,int>(8);
+  GridType grid(upperRight,numElements,0,0);
+
+  write("yasp_" + std::to_string(dim) + "d_", grid.leafGridView());
+}
+
+template <int dim>
+void write_spgrid(std::integral_constant<int,dim>)
+{
+#ifdef HAVE_DUNE_SPGRID
+  using GridType = SPGrid<double,dim, SPIsotropicRefinement>;
+  FieldVector<double,dim> upperRight; upperRight = 1.0;
+  auto numElements = filledArray<dim,int>(8);
+  GridType grid(SPDomain<double,dim>::unitCube(),numElements);
+
+  write("sp_" + std::to_string(dim) + "d_", grid.leafGridView());
+#endif
+}
 
 int main(int argc, char** argv)
 {
   Dune::MPIHelper::instance(argc, argv);
 
-  const int dim = 3;
-
-  using GridType = YaspGrid<dim>;
-  FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(8);
-  GridType grid(upperRight,numElements);
-
-  using GridView = typename GridType::LeafGridView;
-  GridView gridView = grid.leafGridView();
-
-  using namespace BasisFactory;
-  auto basis = makeBasis(gridView, lagrange<1>());
-
-  std::vector<double> p1function(basis.dimension());
-
-  interpolate(basis, p1function, [](auto const& x) {
-    return 100*x[0] + 10*x[1] + 1*x[2];
+  Hybrid::forEach(std::make_tuple(int_<1>{}, int_<2>{}, int_<3>{}), [](auto const dim)
+  {
+    write_yaspgrid(dim);
+    write_spgrid(dim);
   });
-
-  // write discrete global-basis function
-  auto p1FctWrapped = makeDiscreteGlobalBasisFunction<double>(basis, p1function);
-
-  {
-    using Writer = VtkStructuredGridWriter<GridView>;
-    Writer vtkWriter(gridView);
-    vtkWriter.addPointData(p1FctWrapped, "p1");
-    vtkWriter.addCellData(p1FctWrapped, "p0");
-
-    // write analytic function
-    auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
-      return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
-    }, gridView);
-
-    vtkWriter.addPointData(p1Analytic, "analytic");
-
-    vtkWriter.write("sg_ascii_float32.vts", Vtk::ASCII);
-    vtkWriter.write("sg_binary_float32.vts", Vtk::BINARY);
-    vtkWriter.write("sg_compressed_float32.vts", Vtk::COMPRESSED);
-    vtkWriter.write("sg_ascii_float64.vts", Vtk::ASCII, Vtk::FLOAT64);
-    vtkWriter.write("sg_binary_float64.vts", Vtk::BINARY, Vtk::FLOAT64);
-    vtkWriter.write("sg_compressed_float64.vts", Vtk::COMPRESSED, Vtk::FLOAT64);
-  }
-
-  {
-    using Writer = VtkImageDataWriter<GridView>;
-    Writer vtkWriter(gridView);
-    vtkWriter.addPointData(p1FctWrapped, "p1");
-    vtkWriter.addCellData(p1FctWrapped, "p0");
-
-    // write analytic function
-    auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
-      return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
-    }, gridView);
-
-    vtkWriter.addPointData(p1Analytic, "analytic");
-
-    vtkWriter.write("id_ascii_float32.vti", Vtk::ASCII);
-    vtkWriter.write("id_binary_float32.vti", Vtk::BINARY);
-    vtkWriter.write("id_compressed_float32.vti", Vtk::COMPRESSED);
-    vtkWriter.write("id_ascii_float64.vti", Vtk::ASCII, Vtk::FLOAT64);
-    vtkWriter.write("id_binary_float64.vti", Vtk::BINARY, Vtk::FLOAT64);
-    vtkWriter.write("id_compressed_float64.vti", Vtk::COMPRESSED, Vtk::FLOAT64);
-  }
 }

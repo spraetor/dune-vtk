@@ -34,6 +34,8 @@ void VtkWriter<GV,DC>
   }
 #endif
 
+  dataCollector_.update();
+
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();

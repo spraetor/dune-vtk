@@ -37,7 +37,7 @@ public:
   {
     std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& element : elements(gridView_)) {
+    for (auto const& element : elements(gridView_, Partitions::interior)) {
       auto geometry = element.geometry();
       auto refElem = referenceElement<T,dim>(element.type());
 
@@ -77,7 +77,7 @@ public:
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& c : elements(gridView_)) {
+    for (auto const& c : elements(gridView_, Partitions::interior)) {
       Vtk::CellType cellType(c.type(), Vtk::QUADRATIC);
       for (int j = 0; j < c.subEntities(dim); ++j) {
         int k = cellType.permutation(j);
@@ -103,7 +103,7 @@ public:
     std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
+    for (auto const& e : elements(gridView_, Partitions::interior)) {
       localFct.bind(e);
       Vtk::CellType cellType{e.type(), Vtk::QUADRATIC};
       auto refElem = referenceElement(e.geometry());

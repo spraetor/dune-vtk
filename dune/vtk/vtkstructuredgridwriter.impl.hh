@@ -28,25 +28,25 @@ void VtkStructuredGridWriter<GV,DC>
       out << std::setprecision(std::numeric_limits<double>::digits10+2);
   }
 
-  dataCollector_.update();
-
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile type=\"StructuredGrid\" version=\"1.0\" "
       << "byte_order=\"" << this->getEndian() << "\" header_type=\"UInt64\""
       << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\">\n" : ">\n");
   out << "<StructuredGrid WholeExtent=\"";
+  auto const& wholeExtent = dataCollector_.wholeExtent();
   for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << dataCollector_.extent()[2*i];
-    out << " " << dataCollector_.extent()[2*i+1];
+    out << (i == 0 ? "" : " ") << wholeExtent[2*i] << " " << wholeExtent[2*i+1];
   }
   out << "\">\n";
-  out << "<Piece NumberOfPoints=\"" << dataCollector_.numPoints() << "\" "
-      << "NumberOfCells=\"" << dataCollector_.numCells() << "\" Extent=\"";
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << dataCollector_.extent()[2*i];
-    out << " " << dataCollector_.extent()[2*i+1];
-  }
-  out << "\">\n";
+
+  dataCollector_.writeLocalPiece([&out](std::array<int,6> const& extent)
+  {
+    out << "<Piece Extent=\"";
+    for (int i = 0; i < 3; ++i) {
+      out << (i == 0 ? "" : " ") << extent[2*i] << " " << extent[2*i+1];
+    }
+    out << "\">\n";
+  });
 
   { // Write data associated with grid points
     auto scalar = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() == 1; });
@@ -127,10 +127,10 @@ void VtkStructuredGridWriter<GV,DC>
       << "byte_order=\"" << this->getEndian() << "\" header_type=\"UInt64\""
       << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\">\n" : ">\n");
   out << "<PStructuredGrid GhostLevel=\"0\" WholeExtent=\"";
+  auto const& wholeExtent = dataCollector_.wholeExtent();
   for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << dataCollector_.extent()[2*i];
-    out << " " << dataCollector_.extent()[2*i+1];
-  } // TODO: WholeExtent is probably a global information. needs synchronization
+    out << (i == 0 ? "" : " ") << wholeExtent[2*i] << " " << wholeExtent[2*i+1];
+  }
   out << "\">\n";
 
   { // Write data associated with grid points
@@ -165,16 +165,20 @@ void VtkStructuredGridWriter<GV,DC>
   out << "</PPoints>\n";
 
   // Write piece file references
-  for (int i = 0; i < size; ++i) {
-    out << "<Piece Source=\"" << pfilename << "_p" << std::to_string(i) << "." << this->fileExtension() << "\" Extent=\"";
-    for (int i = 0; i < 3; ++i) {
-      out << (i == 0 ? "" : " ") << dataCollector_.extent()[2*i];
-      out << " " << dataCollector_.extent()[2*i+1];
-    } // TODO: need extent of piece
-    out << "\" />\n";
-  }
+  dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, std::array<int,6> const& extent, bool write_extent)
+  {
+    out << "<Piece Source=\"" << pfilename << "_p" << std::to_string(p) << "." << ext << "\"";
+    if (write_extent) {
+      out << " Extent=\"";
+      for (int i = 0; i < 3; ++i) {
+        out << (i == 0 ? "" : " ") << extent[2*i] << " " << extent[2*i+1];
+      }
+      out << "\"";
+    }
+    out << " />\n";
+  });
 
-  out << "</PUnstructuredGrid>\n";
+  out << "</PStructuredGrid>\n";
   out << "</VTKFile>";
 }
 

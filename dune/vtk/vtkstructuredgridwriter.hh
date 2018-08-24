@@ -9,12 +9,11 @@
 #include "vtkfunction.hh"
 #include "vtktypes.hh"
 #include "vtkwriter.hh"
-#include "datacollectors/structureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
   /// File-Writer for VTK .vtu files
-  template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
+  template <class GridView, class DataCollector>
   class VtkStructuredGridWriter
       : public VtkWriter<GridView, DataCollector>
   {

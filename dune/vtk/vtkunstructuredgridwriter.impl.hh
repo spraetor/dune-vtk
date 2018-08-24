@@ -28,8 +28,6 @@ void VtkUnstructuredGridWriter<GV,DC>
       out << std::setprecision(std::numeric_limits<double>::digits10+2);
   }
 
-  dataCollector_.update();
-
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" "
       << "byte_order=\"" << this->getEndian() << "\" header_type=\"UInt64\""
