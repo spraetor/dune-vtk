@@ -97,6 +97,14 @@ private:
   std::vector<std::size_t> indexMap_;
 };
 
-#endif
+namespace Impl
+{
+  template<class GridView, class ct, int dim, template< int > class Ref, class Comm>
+  struct StructuredDataCollector<GridView, SPGrid<ct,dim,Ref,Comm>>
+  {
+    using type = SPDataCollector<GridView>;
+  };
+}
 
+#endif // HAVE_DUNE_SPGRID
 }} // end namespace Dune::experimental

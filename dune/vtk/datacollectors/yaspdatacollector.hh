@@ -121,4 +121,13 @@ private:
   int level_;
 };
 
+namespace Impl
+{
+  template<class GridView, int dim, class Coordinates>
+  struct StructuredDataCollector<GridView, YaspGrid<dim,Coordinates>>
+  {
+    using type = YaspDataCollector<GridView>;
+  };
+}
+
 }} // end namespace Dune::experimental

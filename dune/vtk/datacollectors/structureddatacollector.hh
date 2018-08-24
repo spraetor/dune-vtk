@@ -4,6 +4,19 @@
 
 namespace Dune { namespace experimental
 {
+
+namespace Impl
+{
+  // Should be specialized for concrete structured grid
+  template <class GridView, class Grid>
+  struct StructuredDataCollector;
+}
+
+template <class GridView>
+using StructuredDataCollector = typename Impl::StructuredDataCollector<GridView, typename GridView::Grid>::type;
+
+
+/// The Interface for structured data-collectors
 template <class GridView, class Derived>
 class StructuredDataCollectorInterface
     : public DataCollectorInterface<GridView, Derived>

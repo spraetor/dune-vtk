@@ -14,7 +14,7 @@
 namespace Dune { namespace experimental
 {
   /// File-Writer for VTK .vtu files
-  template <class GridView, class DataCollector>
+  template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
   class VtkImageDataWriter
       : public VtkWriter<GridView, DataCollector>
   {
