@@ -82,6 +82,14 @@ CellType::CellType (GeometryType const& t, CellParametrization parametrization)
       permutation_ = {0,1,3,2,4};
       noPermutation_ = false;
     }
+    else if (t.isNone() && t.dim() == 1) {
+      type_ = LINE;
+      permutation_ = {0,1};
+    }
+    else if (t.isNone() && t.dim() == 2) {
+      type_ = POLYGON;
+      permutation_ = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
+    }
     else {
       std::cerr << "Geometry Type not supported by VTK!\n";
       std::abort();
