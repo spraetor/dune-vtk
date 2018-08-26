@@ -29,56 +29,39 @@ void VtkImageDataWriter<GV,DC>
   }
 
   std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile type=\"ImageData\" version=\"1.0\" "
-      << "byte_order=\"" << this->getEndian() << "\" header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\">\n" : ">\n");
-  out << "<ImageData WholeExtent=\"";
-  auto const& wholeExtent = dataCollector_.wholeExtent();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << wholeExtent[2*i] << " " << wholeExtent[2*i+1];
-  }
-  out << "\" Origin=\"";
-  auto const& origin = dataCollector_.origin();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << origin[i];
-  }
-  out << "\" Spacing=\"";
-  auto const& spacing = dataCollector_.spacing();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << spacing[i];
-  }
-  out << "\">\n";
+  out << "<VTKFile"
+      << " type=\"StructuredGrid\""
+      << " version=\"1.0\""
+      << " byte_order=\"" << this->getEndian() << "\""
+      << " header_type=\"UInt64\""
+      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
+      << ">\n";
 
-  dataCollector_.writeLocalPiece([&out](std::array<int,6> const& extent)
-  {
-    out << "<Piece Extent=\"";
-    for (int i = 0; i < 3; ++i) {
-      out << (i == 0 ? "" : " ") << extent[2*i] << " " << extent[2*i+1];
-    }
-    out << "\">\n";
+  auto const& wholeExtent = dataCollector_.wholeExtent();
+  auto const& origin = dataCollector_.origin();
+  auto const& spacing = dataCollector_.spacing();
+  out << "<ImageData"
+      << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
+      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
+      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
+      << ">\n";
+
+  dataCollector_.writeLocalPiece([&out](auto const& extent) {
+    out << "<Piece Extent=\"" << join(extent.begin(), extent.end()) << "\">\n";
   });
 
-  { // Write data associated with grid points
-    auto scalar = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<PointData" << (scalar != pointData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                        << (vector != pointData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                        << ">\n";
-    for (auto const& v : pointData_)
-      this->writeData(out, offsets, v, Super::POINT_DATA);
-    out << "</PointData>\n";
-  }
+  // Write data associated with grid points
+  out << "<PointData" << this->getNames(pointData_) << ">\n";
+  for (auto const& v : pointData_)
+    this->writeData(out, offsets, v, Super::POINT_DATA);
+  out << "</PointData>\n";
 
-  { // Write data associated with grid cells
-    auto scalar = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<CellData" << (scalar != cellData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                       << (vector != cellData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                       << ">\n";
-    for (auto const& v : cellData_)
-      this->writeData(out, offsets, v, Super::CELL_DATA);
-    out << "</CellData>\n";
-  }
+  // Write data associated with grid cells
+  out << "<CellData" << this->getNames(cellData_) << ">\n";
+  for (auto const& v : cellData_)
+    this->writeData(out, offsets, v, Super::CELL_DATA);
+  out << "</CellData>\n";
+
   out << "</Piece>\n";
   out << "</ImageData>\n";
 
@@ -88,13 +71,13 @@ void VtkImageDataWriter<GV,DC>
     out << "<AppendedData encoding=\"raw\">\n_";
     appended_pos = out.tellp();
     for (auto const& v : pointData_) {
-      if (datatype_ == Vtk::FLOAT32)
+      if (v.type() == Vtk::FLOAT32)
         blocks.push_back( this->template writeDataAppended<float>(out, v, Super::POINT_DATA) );
       else
         blocks.push_back( this->template writeDataAppended<double>(out, v, Super::POINT_DATA) );
     }
     for (auto const& v : cellData_) {
-      if (datatype_ == Vtk::FLOAT32)
+      if (v.type() == Vtk::FLOAT32)
         blocks.push_back( this->template writeDataAppended<float>(out, v, Super::CELL_DATA) );
       else
         blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
@@ -123,63 +106,53 @@ void VtkImageDataWriter<GV,DC>
   std::string filename = pfilename + ".p" + this->fileExtension();
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
 
-  out << "<VTKFile type=\"PImageData\" version=\"1.0\" "
-      << "byte_order=\"" << this->getEndian() << "\" header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\">\n" : ">\n");
-  out << "<PImageData GhostLevel=\"0\" WholeExtent=\"";
+  out << "<VTKFile"
+      << " type=\"StructuredGrid\""
+      << " version=\"1.0\""
+      << " byte_order=\"" << this->getEndian() << "\""
+      << " header_type=\"UInt64\""
+      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
+      << ">\n";
+
   auto const& wholeExtent = dataCollector_.wholeExtent();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << wholeExtent[2*i] << " " << wholeExtent[2*i+1];
-  }
-  out << "\" Origin=\"";
   auto const& origin = dataCollector_.origin();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << origin[i];
-  }
-  out << "\" Spacing=\"";
   auto const& spacing = dataCollector_.spacing();
-  for (int i = 0; i < 3; ++i) {
-    out << (i == 0 ? "" : " ") << spacing[i];
-  }
-  out << "\">\n";
+  out << "<PImageData"
+      << " GhostLevel=\"0\""
+      << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
+      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
+      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
+      << ">\n";
 
-  { // Write data associated with grid points
-    auto scalar = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(pointData_.begin(), pointData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<PPointData" << (scalar != pointData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                         << (vector != pointData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                         << ">\n";
-    for (auto const& v : pointData_) {
-      out << "<PDataArray Name=\"" << v.name() << "\" type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
-          << " NumberOfComponents=\"" << v.ncomps() << "\" />\n";
-    }
-    out << "</PPointData>\n";
+  // Write data associated with grid points
+  out << "<PPointData" << this->getNames(pointData_) << ">\n";
+  for (auto const& v : pointData_) {
+    out << "<PDataArray"
+        << " Name=\"" << v.name() << "\""
+        << " type=\"" << to_string(v.type()) << "\""
+        << " NumberOfComponents=\"" << v.ncomps() << "\""
+        << " />\n";
   }
+  out << "</PPointData>\n";
 
-  { // Write data associated with grid cells
-    auto scalar = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() == 1; });
-    auto vector = std::find_if(cellData_.begin(), cellData_.end(), [](auto const& v) { return v.ncomps() > 1; });
-    out << "<PCellData" << (scalar != cellData_.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-                        << (vector != cellData_.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-                        << ">\n";
-    for (auto const& v : cellData_) {
-      out << "<PDataArray Name=\"" << v.name() << "\" type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
-          << " NumberOfComponents=\"" << v.ncomps() << "\" />\n";
-    }
-    out << "</PCellData>\n";
+  // Write data associated with grid cells
+  out << "<PCellData" << this->getNames(cellData_) << ">\n";
+  for (auto const& v : cellData_) {
+    out << "<PDataArray"
+        << " Name=\"" << v.name() << "\""
+        << " type=\"" <<  to_string(v.type()) << "\""
+        << " NumberOfComponents=\"" << v.ncomps() << "\""
+        << " />\n";
   }
+  out << "</PCellData>\n";
 
   // Write piece file references
-  dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, std::array<int,6> const& extent, bool write_extent)
+  dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, auto const& extent, bool write_extent)
   {
-    out << "<Piece Source=\"" << pfilename << "_p" << std::to_string(p) << "." << ext << "\"";
-    if (write_extent) {
-      out << " Extent=\"";
-      for (int i = 0; i < 3; ++i) {
-        out << (i == 0 ? "" : " ") << extent[2*i] << " " << extent[2*i+1];
-      }
-      out << "\"";
-     }
+    std::string piece_source = pfilename + "_p" + std::to_string(p) + "." + ext;
+    out << "<Piece Source=\"" << piece_source << "\"";
+    if (write_extent)
+      out << " Extent=\"" << join(extent.begin(), extent.end()) << "\"";
      out << " />\n";
   });
 

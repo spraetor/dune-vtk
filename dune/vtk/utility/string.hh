@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <locale>
+#include <sstream>
 #include <string>
 
 namespace Dune
@@ -74,8 +75,8 @@ namespace Dune
     }
   }
 
-  template <class InputIter, class SeparaterIter, class Func>
-  void split(InputIter first, InputIter end, SeparaterIter s_first, SeparaterIter s_end, Func f)
+  template <class InputIter, class SeparatorIter, class Func>
+  void split(InputIter first, InputIter end, SeparatorIter s_first, SeparatorIter s_end, Func f)
   {
     if (first == end)
       return;
@@ -100,6 +101,20 @@ namespace Dune
       str.replace(start_pos, from.length(), to);
       start_pos += to.length();
     }
+  }
+
+
+  template <class InputIter>
+  std::string join (InputIter first, InputIter end, std::string sep = " ")
+  {
+    if (first == end)
+      return "";
+
+    std::ostringstream os;
+    os << *first++;
+    while (first != end)
+      os << sep << *first++;
+    return os.str();
   }
 
 } // end namspace Dune

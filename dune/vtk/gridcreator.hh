@@ -28,9 +28,7 @@ namespace Dune { namespace experimental
 
       std::size_t idx = 0;
       for (std::size_t i = 0; i < types.size(); ++i) {
-        if (Vtk::Map::from_type.count(types[i]) == 0)
-          DUNE_THROW(Exception, "Unknown ElementType: " << types[i]);
-        auto type = Vtk::Map::from_type[types[i]];
+        auto type = Vtk::to_geometry(types[i]);
         Vtk::CellType cellType{type};
         auto refElem = referenceElement<double,Grid::dimension>(type);
 
@@ -92,9 +90,7 @@ namespace Dune { namespace experimental
 
       idx = 0;
       for (std::size_t i = 0; i < types.size(); ++i) {
-        if (Vtk::Map::from_type.count(types[i]) == 0)
-          DUNE_THROW(Exception, "Unknown ElementType: " << types[i]);
-        auto type = Vtk::Map::from_type[types[i]];
+        auto type = Vtk::to_geometry(types[i]);
         Vtk::CellType cellType{type};
 
         std::size_t nNodes = offsets[i] - (i == 0 ? 0 : offsets[i-1]);

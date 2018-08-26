@@ -17,6 +17,7 @@ namespace Dune { namespace experimental
       COMPRESSED = 1<<2,
       APPENDED = BINARY | COMPRESSED
     };
+    std::string to_string (FormatTypes);
 
     enum DataTypes {
       UNKNOWN = 0,
@@ -27,6 +28,7 @@ namespace Dune { namespace experimental
       FLOAT32 = 32,
       FLOAT64 = 64
     };
+    std::string to_string (DataTypes);
 
     enum CellParametrization {
       LINEAR,
@@ -56,12 +58,28 @@ namespace Dune { namespace experimental
       QUADRATIC_TETRA      = 24,
       QUADRATIC_HEXAHEDRON = 25
     };
+    GeometryType to_geometry (std::uint8_t);
 
     struct Map
     {
-      static std::map<std::uint8_t, GeometryType> from_type; // VTK Cell type -> Dune::GeometryType
       static std::map<std::string, DataTypes> to_datatype; // String -> DataTypes
-      static std::map<DataTypes, std::string> from_datatype; // DataTypes -> String
+
+      template <class T> struct Type {};
+
+      static constexpr DataTypes typeImpl (Type<std::int8_t>)   { return INT8; }
+      static constexpr DataTypes typeImpl (Type<std::uint8_t>)  { return UINT8; }
+      static constexpr DataTypes typeImpl (Type<std::int16_t>)  { return INT16; }
+      static constexpr DataTypes typeImpl (Type<std::uint16_t>) { return UINT16; }
+      static constexpr DataTypes typeImpl (Type<std::int32_t>)  { return INT32; }
+      static constexpr DataTypes typeImpl (Type<std::uint32_t>) { return UINT32; }
+      static constexpr DataTypes typeImpl (Type<std::int64_t>)  { return INT64; }
+      static constexpr DataTypes typeImpl (Type<std::uint64_t>) { return UINT64; }
+      static constexpr DataTypes typeImpl (Type<float>)       { return FLOAT32; }
+      static constexpr DataTypes typeImpl (Type<double>)      { return FLOAT64; }
+      static constexpr DataTypes typeImpl (Type<long double>) { return FLOAT64; }
+
+      template <class T>
+      static constexpr DataTypes type = typeImpl(Type<T>{});
     };
 
 

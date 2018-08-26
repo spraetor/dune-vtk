@@ -4,6 +4,8 @@
 #include <iosfwd>
 #include <map>
 
+#include <dune/common/std/optional.hh>
+
 #include "datacollector.hh"
 #include "filewriter.hh"
 #include "vtkfunction.hh"
@@ -116,6 +118,35 @@ namespace Dune { namespace experimental
     // stream `out`. Return the written block size.
     template <class T>
     std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
+
+
+    Std::optional<std::string> getScalarName (std::vector<GlobalFunction> const& data) const
+    {
+      auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
+      return scalar != data.end() ? Std::optional<std::string>{scalar->name()} : Std::optional<std::string>{};
+    }
+
+    Std::optional<std::string> getVectorName (std::vector<GlobalFunction> const& data) const
+    {
+      auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
+      return vector != data.end() ? Std::optional<std::string>{vector->name()} : Std::optional<std::string>{};
+    }
+
+    Std::optional<std::string> getTensorName (std::vector<GlobalFunction> const& data) const
+    {
+      auto tensor = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 9; });
+      return tensor != data.end() ? Std::optional<std::string>{tensor->name()} : Std::optional<std::string>{};
+    }
+
+    std::string getNames (std::vector<GlobalFunction> const& data) const
+    {
+      auto n1 = getScalarName(data);
+      auto n2 = getVectorName(data);
+      auto n3 = getScalarName(data);
+      return (n1 ? " Scalars=\"" + *n1 + "\"" : "")
+           + (n2 ? " Vectors=\"" + *n2 + "\"" : "")
+           + (n3 ? " Tensors=\"" + *n3 + "\"" : "");
+    }
 
     // Returns endianness
     std::string getEndian () const

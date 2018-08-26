@@ -65,7 +65,7 @@ void VtkWriter<GV,DC>
   ::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
                GlobalFunction const& fct, PositionTypes type) const
 {
-  out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
+  out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << to_string(fct.type()) << "\""
       << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
 
   if (format_ == Vtk::ASCII) {
@@ -93,7 +93,7 @@ template <class GV, class DC>
 void VtkWriter<GV,DC>
   ::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
-  out << "<DataArray type=\"" << Vtk::Map::from_datatype[datatype_] << "\""
+  out << "<DataArray type=\"" << to_string(datatype_) << "\""
       << " NumberOfComponents=\"3\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
 
   if (format_ == Vtk::ASCII) {
