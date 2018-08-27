@@ -4,28 +4,29 @@
 #include <iosfwd>
 #include <map>
 
-#include "datacollector.hh"
-#include "filewriter.hh"
-#include "vtkfunction.hh"
-#include "vtktypes.hh"
-#include "vtkwriter.hh"
-#include "datacollectors/structureddatacollector.hh"
+#include <dune/vtk/datacollector.hh>
+#include <dune/vtk/filewriter.hh>
+#include <dune/vtk/vtkfunction.hh>
+#include <dune/vtk/vtktypes.hh>
+#include <dune/vtk/datacollectors/structureddatacollector.hh>
+
+#include "vtkwriterinterface.hh"
 
 namespace Dune { namespace experimental
 {
   /// File-Writer for VTK .vtu files
   template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
-  class VtkStructuredGridWriter
-      : public VtkWriter<GridView, DataCollector>
+  class VtkRectilinearGridWriter
+      : public VtkWriterInterface<GridView, DataCollector>
   {
     static constexpr int dimension = GridView::dimension;
 
-    using Super = VtkWriter<GridView, DataCollector>;
+    using Super = VtkWriterInterface<GridView, DataCollector>;
     using pos_type = typename Super::pos_type;
 
   public:
     /// Constructor, stores the gridView
-    VtkStructuredGridWriter (GridView const& gridView)
+    VtkRectilinearGridWriter (GridView const& gridView)
       : Super(gridView)
     {}
 
@@ -38,9 +39,14 @@ namespace Dune { namespace experimental
     /// for [i] in [0,...,size).
     virtual void writeParallelFile (std::string const& pfilename, int size) const override;
 
+    void writeCoordinates (std::ofstream& out, std::vector<pos_type>& offsets) const;
+
+    template <class T>
+    std::array<std::uint64_t, 3> writeCoordinatesAppended (std::ofstream& out) const;
+
     virtual std::string fileExtension () const override
     {
-      return "vts";
+      return "vtr";
     }
 
   private:
@@ -55,4 +61,4 @@ namespace Dune { namespace experimental
 
 }} // end namespace Dune::experimental
 
-#include "vtkstructuredgridwriter.impl.hh"
+#include "vtkrectilineargridwriter.impl.hh"

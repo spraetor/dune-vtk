@@ -10,17 +10,18 @@
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
-#include "utility/enum.hh"
-#include "utility/filesystem.hh"
-#include "utility/string.hh"
+#include <dune/vtk/utility/enum.hh>
+#include <dune/vtk/utility/filesystem.hh>
+#include <dune/vtk/utility/string.hh>
 
 namespace Dune { namespace experimental {
 
 template <class GV, class DC>
-void VtkImageDataWriter<GV,DC>
+void VtkStructuredGridWriter<GV,DC>
   ::writeSerialFile (std::string const& filename) const
 {
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
   if (format_ == Vtk::ASCII) {
     if (datatype_ == Vtk::FLOAT32)
       out << std::setprecision(std::numeric_limits<float>::digits10+2);
@@ -38,13 +39,7 @@ void VtkImageDataWriter<GV,DC>
       << ">\n";
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
-  auto const& origin = dataCollector_.origin();
-  auto const& spacing = dataCollector_.spacing();
-  out << "<ImageData"
-      << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
-      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
-      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
-      << ">\n";
+  out << "<StructuredGrid WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\">\n";
 
   dataCollector_.writeLocalPiece([&out](auto const& extent) {
     out << "<Piece Extent=\"" << join(extent.begin(), extent.end()) << "\">\n";
@@ -62,8 +57,13 @@ void VtkImageDataWriter<GV,DC>
     this->writeData(out, offsets, v, Super::CELL_DATA);
   out << "</CellData>\n";
 
+  // Write point coordinates
+  out << "<Points>\n";
+  this->writePoints(out, offsets);
+  out << "</Points>\n";
+
   out << "</Piece>\n";
-  out << "</ImageData>\n";
+  out << "</StructuredGrid>\n";
 
   std::vector<std::uint64_t> blocks; // size of i'th appended block
   pos_type appended_pos = 0;
@@ -82,6 +82,11 @@ void VtkImageDataWriter<GV,DC>
       else
         blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
     }
+
+    if (datatype_ == Vtk::FLOAT32)
+      blocks.push_back( this->template writePointsAppended<float>(out) );
+    else
+      blocks.push_back( this->template writePointsAppended<double>(out) );
     out << "</AppendedData>\n";
   }
 
@@ -100,14 +105,15 @@ void VtkImageDataWriter<GV,DC>
 
 
 template <class GV, class DC>
-void VtkImageDataWriter<GV,DC>
+void VtkStructuredGridWriter<GV,DC>
   ::writeParallelFile (std::string const& pfilename, int size) const
 {
   std::string filename = pfilename + ".p" + this->fileExtension();
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
 
   out << "<VTKFile"
-      << " type=\"StructuredGrid\""
+      << " type=\"PStructuredGrid\""
       << " version=\"1.0\""
       << " byte_order=\"" << this->getEndian() << "\""
       << " header_type=\"UInt64\""
@@ -115,13 +121,9 @@ void VtkImageDataWriter<GV,DC>
       << ">\n";
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
-  auto const& origin = dataCollector_.origin();
-  auto const& spacing = dataCollector_.spacing();
-  out << "<PImageData"
-      << " GhostLevel=\"0\""
+  out << "<PStructuredGrid"
+      << " GhostLevel=\"" << dataCollector_.ghostLevel() << "\""
       << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
-      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
-      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
       << ">\n";
 
   // Write data associated with grid points
@@ -140,11 +142,19 @@ void VtkImageDataWriter<GV,DC>
   for (auto const& v : cellData_) {
     out << "<PDataArray"
         << " Name=\"" << v.name() << "\""
-        << " type=\"" <<  to_string(v.type()) << "\""
+        << " type=\"" << to_string(v.type()) << "\""
         << " NumberOfComponents=\"" << v.ncomps() << "\""
         << " />\n";
   }
   out << "</PCellData>\n";
+
+  // Write points
+  out << "<PPoints>\n";
+  out << "<PDataArray"
+      << " type=\"" << to_string(datatype_) << "\""
+      << " NumberOfComponents=\"3\""
+      << " />\n";
+  out << "</PPoints>\n";
 
   // Write piece file references
   dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, auto const& extent, bool write_extent)
@@ -153,10 +163,10 @@ void VtkImageDataWriter<GV,DC>
     out << "<Piece Source=\"" << piece_source << "\"";
     if (write_extent)
       out << " Extent=\"" << join(extent.begin(), extent.end()) << "\"";
-     out << " />\n";
+    out << " />\n";
   });
 
-  out << "</PImageData>\n";
+  out << "</PStructuredGrid>\n";
   out << "</VTKFile>";
 }
 

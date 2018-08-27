@@ -10,17 +10,19 @@
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
-#include "utility/enum.hh"
-#include "utility/filesystem.hh"
-#include "utility/string.hh"
+#include <dune/vtk/utility/enum.hh>
+#include <dune/vtk/utility/filesystem.hh>
+#include <dune/vtk/utility/string.hh>
 
 namespace Dune { namespace experimental {
 
 template <class GV, class DC>
-void VtkUnstructuredGridWriter<GV,DC>
+void VtkImageDataWriter<GV,DC>
   ::writeSerialFile (std::string const& filename) const
 {
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
+
   if (format_ == Vtk::ASCII) {
     if (datatype_ == Vtk::FLOAT32)
       out << std::setprecision(std::numeric_limits<float>::digits10+2);
@@ -30,18 +32,25 @@ void VtkUnstructuredGridWriter<GV,DC>
 
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile"
-      << " type=\"UnstructuredGrid\""
+      << " type=\"StructuredGrid\""
       << " version=\"1.0\""
       << " byte_order=\"" << this->getEndian() << "\""
       << " header_type=\"UInt64\""
       << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
       << ">\n";
 
-  out << "<UnstructuredGrid>\n";
-  out << "<Piece"
-      << " NumberOfPoints=\"" << dataCollector_.numPoints() << "\""
-      << " NumberOfCells=\"" << dataCollector_.numCells() << "\""
+  auto const& wholeExtent = dataCollector_.wholeExtent();
+  auto const& origin = dataCollector_.origin();
+  auto const& spacing = dataCollector_.spacing();
+  out << "<ImageData"
+      << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
+      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
+      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
       << ">\n";
+
+  dataCollector_.writeLocalPiece([&out](auto const& extent) {
+    out << "<Piece Extent=\"" << join(extent.begin(), extent.end()) << "\">\n";
+  });
 
   // Write data associated with grid points
   out << "<PointData" << this->getNames(pointData_) << ">\n";
@@ -55,18 +64,8 @@ void VtkUnstructuredGridWriter<GV,DC>
     this->writeData(out, offsets, v, Super::CELL_DATA);
   out << "</CellData>\n";
 
-  // Write point coordinates
-  out << "<Points>\n";
-  this->writePoints(out, offsets);
-  out << "</Points>\n";
-
-  // Write element connectivity, types and offsets
-  out << "<Cells>\n";
-  this->writeCells(out, offsets);
-  out << "</Cells>\n";
-
   out << "</Piece>\n";
-  out << "</UnstructuredGrid>\n";
+  out << "</ImageData>\n";
 
   std::vector<std::uint64_t> blocks; // size of i'th appended block
   pos_type appended_pos = 0;
@@ -85,13 +84,6 @@ void VtkUnstructuredGridWriter<GV,DC>
       else
         blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
     }
-
-    if (datatype_ == Vtk::FLOAT32)
-      blocks.push_back( this->template writePointsAppended<float>(out) );
-    else
-      blocks.push_back( this->template writePointsAppended<double>(out) );
-    auto bs = this->writeCellsAppended(out);
-    blocks.insert(blocks.end(), bs.begin(), bs.end());
     out << "</AppendedData>\n";
   }
 
@@ -110,21 +102,30 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 
 template <class GV, class DC>
-void VtkUnstructuredGridWriter<GV,DC>
+void VtkImageDataWriter<GV,DC>
   ::writeParallelFile (std::string const& pfilename, int size) const
 {
-  std::string filename = pfilename + ".pvtu";
+  std::string filename = pfilename + ".p" + this->fileExtension();
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
 
   out << "<VTKFile"
-      << " type=\"PUnstructuredGrid\""
+      << " type=\"StructuredGrid\""
       << " version=\"1.0\""
       << " byte_order=\"" << this->getEndian() << "\""
       << " header_type=\"UInt64\""
       << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
       << ">\n";
 
-  out << "<PUnstructuredGrid GhostLevel=\"0\">\n";
+  auto const& wholeExtent = dataCollector_.wholeExtent();
+  auto const& origin = dataCollector_.origin();
+  auto const& spacing = dataCollector_.spacing();
+  out << "<PImageData"
+      << " GhostLevel=\"" << dataCollector_.ghostLevel() << "\""
+      << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
+      << " Origin=\"" << join(origin.begin(), origin.end()) << "\""
+      << " Spacing=\"" << join(spacing.begin(), spacing.end()) << "\""
+      << ">\n";
 
   // Write data associated with grid points
   out << "<PPointData" << this->getNames(pointData_) << ">\n";
@@ -142,27 +143,23 @@ void VtkUnstructuredGridWriter<GV,DC>
   for (auto const& v : cellData_) {
     out << "<PDataArray"
         << " Name=\"" << v.name() << "\""
-        << " type=\"" << to_string(v.type()) << "\""
+        << " type=\"" <<  to_string(v.type()) << "\""
         << " NumberOfComponents=\"" << v.ncomps() << "\""
         << " />\n";
   }
   out << "</PCellData>\n";
 
-  // Write points
-  out << "<PPoints>\n";
-  out << "<PDataArray"
-      << " type=\"" << to_string(datatype_) << "\""
-      << " NumberOfComponents=\"3\""
-      << " />\n";
-  out << "</PPoints>\n";
-
   // Write piece file references
-  for (int p = 0; p < size; ++p) {
-    std::string piece_source = pfilename + "_p" + std::to_string(p) + "." + this->fileExtension();
-    out << "<Piece Source=\"" << piece_source << "\" />\n";
-  }
+  dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, auto const& extent, bool write_extent)
+  {
+    std::string piece_source = pfilename + "_p" + std::to_string(p) + "." + ext;
+    out << "<Piece Source=\"" << piece_source << "\"";
+    if (write_extent)
+      out << " Extent=\"" << join(extent.begin(), extent.end()) << "\"";
+     out << " />\n";
+  });
 
-  out << "</PUnstructuredGrid>\n";
+  out << "</PImageData>\n";
   out << "</VTKFile>";
 }
 

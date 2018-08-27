@@ -113,6 +113,29 @@ public:
     }
   }
 
+  template <class T>
+  std::array<std::vector<T>, 3> coordinatesImpl () const
+  {
+    auto it = gridView_.grid().begin(level_);
+    auto const& coords = it->coords;
+
+    std::array<std::vector<T>, 3> ordinates{};
+    writeLocalPieceImpl([&ordinates,&coords](auto const& extent)
+    {
+      for (std::size_t d = 0; d < dim; ++d) {
+        auto s = extent[2*d+1] - extent[2*d] + 1;
+        ordinates[d].resize(s);
+        for (std::size_t i = 0; i < s; ++i)
+          ordinates[d][i] = coords.coordinate(d, extent[2*d] + i);
+      }
+    });
+
+    for (std::size_t d = dim; d < 3; ++d)
+      ordinates[d].resize(1, T(0));
+
+    return ordinates;
+  }
+
 private:
   std::array<int, 6> wholeExtent_;
   FieldVector<ctype,3> spacing_;

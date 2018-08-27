@@ -19,7 +19,7 @@
 #include <dune/grid/io/file/vtk.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
-#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 

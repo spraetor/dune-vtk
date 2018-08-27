@@ -30,6 +30,7 @@ public:
   StructuredDataCollectorInterface (GridView const& gridView)
     : Super(gridView)
     , defaultDataCollector_(gridView)
+    , ghostLevel_(gridView.overlapSize(0))
   {}
 
   /// Return number of grid vertices
@@ -70,6 +71,21 @@ public:
     this->asDerived().writePiecesImpl(writer);
   }
 
+  int ghostLevel () const
+  {
+    return this->asDerived().ghostLevelImpl();
+  }
+
+  /// Return the coordinates along the ordinates x, y, and z
+  template <class T>
+  std::array<std::vector<T>, 3> coordinates () const
+  {
+    return this->asDerived().template coordinatesImpl<T>();
+  }
+
+
+public:
+
   /// Return the coordinates of all grid vertices in the order given by the indexSet
   template <class T>
   std::vector<T> pointsImpl () const
@@ -84,8 +100,39 @@ public:
     return defaultDataCollector_.template pointData<T>(fct);
   }
 
+
+private:
+
+  int ghostLevelImpl () const
+  {
+    return ghostLevel_;
+  }
+
+  template <class T>
+  std::array<std::vector<T>, 3> coordinatesImpl () const
+  {
+    auto origin = this->origin();
+    auto spacing = this->spacing();
+
+    std::array<std::vector<T>, 3> ordinates{};
+    writeLocalPiece([&ordinates,&origin,&spacing](auto const& extent) {
+      for (std::size_t d = 0; d < GridView::dimension; ++d) {
+        auto s = extent[2*d+1] - extent[2*d] + 1;
+        ordinates[d].resize(s);
+        for (std::size_t i = 0; i < s; ++i)
+          ordinates[d][i] = origin[d] + (extent[2*d] + i)*spacing[d];
+      }
+    });
+
+    for (std::size_t d = GridView::dimension; d < 3; ++d)
+      ordinates[d].resize(1, T(0));
+
+    return ordinates;
+  }
+
 private:
   DefaultDataCollector<GridView> defaultDataCollector_;
+  int ghostLevel_;
 };
 
 }} // end namespace Dune::experimental

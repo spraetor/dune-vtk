@@ -20,8 +20,9 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkstructuredgridwriter.hh>
-#include <dune/vtk/vtkimagedatawriter.hh>
+#include <dune/vtk/writers/vtkimagedatawriter.hh>
+#include <dune/vtk/writers/vtkrectilineargridwriter.hh>
+#include <dune/vtk/writers/vtkstructuredgridwriter.hh>
 #include <dune/vtk/datacollectors/yaspdatacollector.hh>
 #include <dune/vtk/datacollectors/spdatacollector.hh>
 
@@ -36,21 +37,28 @@ template <class GridView>
 void write(std::string prefix, GridView const& gridView)
 {
   auto fct2 = makeAnalyticGridViewFunction([](auto const& x) {
-    return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
+    return std::sin(10*x[0]) * (x.size() > 1 ? std::cos(10*x[1]) : 1) + (x.size() > 2 ? std::sin(10*x[2]) : 0);
   }, gridView);
-
-  {
-    using Writer = VtkStructuredGridWriter<GridView>;
-    Writer vtkWriter(gridView);
-    vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII);
-  }
 
   {
     using Writer = VtkImageDataWriter<GridView>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(fct2, "analytic");
     vtkWriter.write(prefix + "id_ascii_float32.vti", Vtk::ASCII);
+  }
+
+  {
+    using Writer = VtkRectilinearGridWriter<GridView>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(fct2, "analytic");
+    vtkWriter.write(prefix + "rg_ascii_float32.vtr", Vtk::ASCII);
+  }
+
+  {
+    using Writer = VtkStructuredGridWriter<GridView>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(fct2, "analytic");
+    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII);
   }
 }
 
@@ -74,7 +82,7 @@ void write_spgrid(std::integral_constant<int,dim>)
   FieldVector<double,dim> upperRight; upperRight = 1.0;
   auto numElements = filledArray<dim,int>(8);
   GridType grid(SPDomain<double,dim>::unitCube(),numElements);
-  grid.globalRefine(1);
+  // grid.globalRefine(1);
 
   write("sp_" + std::to_string(dim) + "d_", grid.leafGridView());
 #endif

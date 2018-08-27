@@ -14,14 +14,14 @@
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
-#include "utility/enum.hh"
-#include "utility/filesystem.hh"
-#include "utility/string.hh"
+#include <dune/vtk/utility/enum.hh>
+#include <dune/vtk/utility/filesystem.hh>
+#include <dune/vtk/utility/string.hh>
 
 namespace Dune { namespace experimental {
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>
+void VtkWriterInterface<GV,DC>
   ::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
 {
   format_ = format;
@@ -61,7 +61,7 @@ void VtkWriter<GV,DC>
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>
+void VtkWriterInterface<GV,DC>
   ::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
                GlobalFunction const& fct, PositionTypes type) const
 {
@@ -90,7 +90,7 @@ void VtkWriter<GV,DC>
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>
+void VtkWriterInterface<GV,DC>
   ::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   out << "<DataArray type=\"" << to_string(datatype_) << "\""
@@ -112,7 +112,7 @@ void VtkWriter<GV,DC>
 
 
 template <class GV, class DC>
-void VtkWriter<GV,DC>
+void VtkWriterInterface<GV,DC>
   ::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   if (format_ == Vtk::ASCII) {
@@ -159,7 +159,7 @@ void VtkWriter<GV,DC>
 
 template <class GV, class DC>
   template <class T>
-std::uint64_t VtkWriter<GV,DC>
+std::uint64_t VtkWriterInterface<GV,DC>
   ::writeDataAppended (std::ofstream& out, GlobalFunction const& fct, PositionTypes type) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
@@ -176,7 +176,7 @@ std::uint64_t VtkWriter<GV,DC>
 
 template <class GV, class DC>
   template <class T>
-std::uint64_t VtkWriter<GV,DC>
+std::uint64_t VtkWriterInterface<GV,DC>
   ::writePointsAppended (std::ofstream& out) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
@@ -187,7 +187,7 @@ std::uint64_t VtkWriter<GV,DC>
 
 
 template <class GV, class DC>
-std::array<std::uint64_t,3> VtkWriter<GV,DC>
+std::array<std::uint64_t,3> VtkWriterInterface<GV,DC>
   ::writeCellsAppended (std::ofstream& out) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
@@ -246,7 +246,7 @@ std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffe
 
 template <class GV, class DC>
   template <class T>
-std::uint64_t VtkWriter<GV,DC>
+std::uint64_t VtkWriterInterface<GV,DC>
   ::writeAppended (std::ofstream& out, std::vector<T> const& values) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");

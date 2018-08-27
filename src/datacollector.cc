@@ -20,7 +20,7 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 #include <dune/vtk/vtkreader.hh>
 #include <dune/vtk/datacollectors/discontinuousdatacollector.hh>
 

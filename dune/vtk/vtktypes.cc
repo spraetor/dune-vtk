@@ -21,14 +21,14 @@ std::string to_string (FormatTypes type)
 std::string to_string (DataTypes type)
 {
   switch (type) {
-    case INT8: return "Int8";
-    case UINT8: return "UInt8";
-    case INT16: return "Int16";
-    case UINT16: return "UInt16";
-    case INT32: return "Int32";
-    case UINT32: return "UInt32";
-    case INT64: return "Int64";
-    case UINT64: return "UInt64";
+    case INT8:    return "Int8";
+    case UINT8:   return "UInt8";
+    case INT16:   return "Int16";
+    case UINT16:  return "UInt16";
+    case INT32:   return "Int32";
+    case UINT32:  return "UInt32";
+    case INT64:   return "Int64";
+    case UINT64:  return "UInt64";
     case FLOAT32: return "Float32";
     case FLOAT64: return "Float64";
     default:

@@ -4,23 +4,24 @@
 #include <iosfwd>
 #include <map>
 
-#include "datacollector.hh"
-#include "filewriter.hh"
-#include "vtkfunction.hh"
-#include "vtktypes.hh"
-#include "vtkwriter.hh"
-#include "datacollectors/structureddatacollector.hh"
+#include <dune/vtk/datacollector.hh>
+#include <dune/vtk/filewriter.hh>
+#include <dune/vtk/vtkfunction.hh>
+#include <dune/vtk/vtktypes.hh>
+#include <dune/vtk/datacollectors/structureddatacollector.hh>
+
+#include "vtkwriterinterface.hh"
 
 namespace Dune { namespace experimental
 {
   /// File-Writer for VTK .vtu files
   template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
   class VtkImageDataWriter
-      : public VtkWriter<GridView, DataCollector>
+      : public VtkWriterInterface<GridView, DataCollector>
   {
     static constexpr int dimension = GridView::dimension;
 
-    using Super = VtkWriter<GridView, DataCollector>;
+    using Super = VtkWriterInterface<GridView, DataCollector>;
     using pos_type = typename Super::pos_type;
 
   public:
