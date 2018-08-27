@@ -61,4 +61,66 @@ proposed one. A comparions:
 | Quadratic Data     | -             | **x**        |
 | Subdivided Data    | **x**         | -            |
 
+## Example
+Create a fine structured YaspGrid and write it in parallel with 8 cores with
+different write modi:
 
+### 1. Create the grid
+
+```c++
+const int dim = 3;
+FieldVector<double,dim> upperRight; upperRight = 1.0;
+auto numElements = filledArray<dim,int>(16);
+YaspGrid<dim> grid(upperRight,numElements,0,0); // no overlap
+grid.globalRefine(3);
+auto gridView = grid.leafGridView();
+```
+
+### 2. Create a function to write
+
+```c++
+auto fct = makeAnalyticGridViewFunction([](auto const& x) {
+  return std::sin(10*x[0]) * std::cos(10*x[1]) + std::sin(10*x[2]);
+}, gridView);
+```
+
+### 3. Write the grid and data to file
+
+```c++
+Vtk[FORMAT]Writer<decltype(gridView)> vtkWriter(gridView);
+vtkWriter.addPointData(fct, "fct");
+vtkWriter.write("filename.vtu", [FORMAT_TYPE], [DATA_TYPE]);
+```
+
+where `FORMAT` one of {UnstructuredGrid,StructuredGrid,RectilinearGrid,ImageData}
+,`FORMAT_TYPE` one of {ASCII,BINARY,COMPRESSED}, and `DATA_TYPE` one of {FLOAT32,FLOAT64}.
+
+We measure the file size (per processor) and the memory requirement of ParaView
+to visualize the data.
+
+| **Setup**                           | **Filesize** | **Memory** |
+| ----------------------------------- | ------------ | ---------- |
+| UnstructuredGrid, ASCII, FLOAT32    | 26M | 330M |
+| *UnstructuredGrid, ASCII, FLOAT64*  | *29M* | *360M* |
+| UnstructuredGrid, BINAR, FLOAT32    | 23M | 330M |
+| UnstructuredGrid, BINAR, FLOAT64    | 27M | 360M |
+| UnstructuredGrid, COMPR, FLOAT32    | 4.5M | 330M |
+| UnstructuredGrid, COMPR, FLOAT64    | 5.7M | 360M |
+| StructuredGrid, ASCII, FLOAT32      | 10M | 34M |
+| StructuredGrid, ASCII, FLOAT64      | 13M | 67M |
+| StructuredGrid, BINAR, FLOAT32      | 4.2M | 34M |
+| StructuredGrid, BINAR, FLOAT64      | 8.4M | 67M | 
+| StructuredGrid, COMPR, FLOAT32      | 1.4M | 34M |
+| StructuredGrid, COMPR, FLOAT64      | 2.6M | 67M |
+| RectilinearGrid, ASCII, FLOAT32     | 3.0M | 8.4M |
+| RectilinearGrid, ASCII, FLOAT64     | 5.3M | 17M |
+| RectilinearGrid, BINAR, FLOAT32     | 1.1M | 8.4M |
+| RectilinearGrid, BINAR, FLOAT64     | 2.1M | 17M |
+| RectilinearGrid, COMPR, FLOAT32     | 970K | 8.4M |
+| RectilinearGrid, COMPR, FLOAT64     | 2.0M | 17M |
+| ImageData, ASCII, FLOAT32           | 3.0M | 8.4M |
+| ImageData, ASCII, FLOAT64           | 5.3M | 17M |
+| ImageData, BINAR, FLOAT32           | 1.1M | 8.4M |
+| ImageData, BINAR, FLOAT64           | 2.1M | 17M |
+| **ImageData, COMPR, FLOAT32**       | **970K** | **8.4M** |
+| ImageData, COMPR, FLOAT64           | 2.0M | 17M |
