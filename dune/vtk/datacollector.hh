@@ -42,6 +42,12 @@ public:
     asDerived().updateImpl();
   }
 
+  /// Return the number of overlapping elements
+  int ghostLevel () const
+  {
+    return asDerived().ghostLevelImpl();
+  }
+
   /// \brief Return a flat vector of point coordinates
   /**
    * All coordinates are extended to 3 components and concatenated.
@@ -104,7 +110,15 @@ protected: // default implementations
     return gridView_.size(0);
   }
 
-  void updateImpl () { /* do nothing */ }
+  void updateImpl ()
+  {
+    /* do nothing */
+  }
+
+  int ghostLevelImpl () const
+  {
+    return gridView_.overlapSize(0);
+  }
 
   // Evaluate `fct` in center of cell
   template <class T, class GlobalFunction>

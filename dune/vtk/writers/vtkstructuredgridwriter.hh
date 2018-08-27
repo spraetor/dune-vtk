@@ -14,7 +14,11 @@
 
 namespace Dune { namespace experimental
 {
-  /// File-Writer for VTK .vtu files
+  /// File-Writer for StructuredGrid VTK .vts files
+  /**
+   * Requirement:
+   * - DataCollector must be a model of \ref StructuredDataCollector
+   **/
   template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
   class VtkStructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
