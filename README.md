@@ -41,18 +41,18 @@ See also the `src/` directory for more examples.
 In Dune-Grid there is a VTK writer available, that is a bit different from the
 proposed one. A comparions:
 
-| Property          | Dune-Grid | Dune-Vtk |
-+-------------------+-----------+----------+
-| VTK version       | 0.1       | 1.0      |
-| UnstructuredGrid  | x         | x        |
-| PolyData          | x         | -        |
-| StructuredGrid    | -         | x        |
-| RectilinearGrid   | -         | x        |
-| ImageData         | -         | x        |
-| ASCII             | x         | x        |
-| BASE64            | x         | -        |
-| APPENDED_RAW      | x         | x        |
-| APPENDED_BASE64   | x         | -        |
-| BASE64_COMPRESSED | -         | -        |
-| APPEDED_COMPRESSED| -         | x        |
-| Parallel files    | x         | x        |
+| *Property*         | *Dune-Grid* | *Dune-Vtk* |
+| ------------------ | :-------: | :------: |
+| VTK version        | 0.1       | 1.0      |
+| UnstructuredGrid   | x         | x        |
+| PolyData           | x         | -        |
+| StructuredGrid     | -         | x        |
+| RectilinearGrid    | -         | x        |
+| ImageData          | -         | x        |
+| ASCII              | x         | x        |
+| BASE64             | x         | -        |
+| APPENDED_RAW       | x         | x        |
+| APPENDED_BASE64    | x         | -        |
+| BASE64_COMPRESSED  | -         | -        |
+| APPEDED_COMPRESSED | -         | x        |
+| Parallel files     | x         | x        |
