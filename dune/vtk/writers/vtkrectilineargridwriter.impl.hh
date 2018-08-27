@@ -39,8 +39,6 @@ void VtkRectilinearGridWriter<GV,DC>
       << ">\n";
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
-  auto const& origin = dataCollector_.origin();
-  auto const& spacing = dataCollector_.spacing();
   out << "<RectilinearGrid"
       << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
       << ">\n";
@@ -113,7 +111,7 @@ void VtkRectilinearGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkRectilinearGridWriter<GV,DC>
-  ::writeParallelFile (std::string const& pfilename, int size) const
+  ::writeParallelFile (std::string const& pfilename, int /*size*/) const
 {
   std::string filename = pfilename + ".p" + this->fileExtension();
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
@@ -128,8 +126,6 @@ void VtkRectilinearGridWriter<GV,DC>
       << ">\n";
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
-  auto const& origin = dataCollector_.origin();
-  auto const& spacing = dataCollector_.spacing();
   out << "<PRectilinearGrid"
       << " GhostLevel=\"" << dataCollector_.ghostLevel() << "\""
       << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""

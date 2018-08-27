@@ -9,11 +9,11 @@ namespace Impl
 {
   // Should be specialized for concrete structured grid
   template <class GridView, class Grid>
-  struct StructuredDataCollector;
+  struct StructuredDataCollectorImpl;
 }
 
 template <class GridView>
-using StructuredDataCollector = typename Impl::StructuredDataCollector<GridView, typename GridView::Grid>::type;
+using StructuredDataCollector = typename Impl::StructuredDataCollectorImpl<GridView, typename GridView::Grid>::type;
 
 
 /// The Interface for structured data-collectors
@@ -33,67 +33,94 @@ public:
     , ghostLevel_(gridView.overlapSize(0))
   {}
 
-  /// Return number of grid vertices
-  std::uint64_t numPointsImpl () const
-  {
-    return gridView_.size(GridView::dimension);
-  }
-
-  void updateImpl ()
-  {
-    defaultDataCollector_.update();
-  }
-
-  std::array<int, 6> const& wholeExtent () const
+  /// Sequence of Index pairs [begin, end) for the cells in each direction
+  std::array<int, 6> wholeExtent () const
   {
     return this->asDerived().wholeExtentImpl();
   }
 
-  FieldVector<ctype, 3> const& origin () const
+  /// Sequence of Index pairs [begin, end) for the cells in each direction of the local partition
+  std::array<int, 6> extent () const
+  {
+    return this->asDerived().extentImpl();
+  }
+
+  /// Lower left corner of the grid
+  FieldVector<ctype, 3> origin () const
   {
     return this->asDerived().originImpl();
   }
 
-  FieldVector<ctype, 3> const& spacing () const
+  /// Constant grid spacing in each coordinate direction
+  FieldVector<ctype, 3> spacing () const
   {
     return this->asDerived().spacingImpl();
   }
 
+  /// Call the `writer` with extent
   template <class Writer>
   void writeLocalPiece (Writer const& writer) const
   {
     this->asDerived().writeLocalPieceImpl(writer);
   }
 
+  /// Call the `writer` with piece number and piece extent
   template <class Writer>
   void writePieces (Writer const& writer) const
   {
     this->asDerived().writePiecesImpl(writer);
   }
 
+  /// Return the number of overlapping elements
   int ghostLevel () const
   {
     return this->asDerived().ghostLevelImpl();
   }
 
-  /// Return the coordinates along the ordinates x, y, and z
+  /// The coordinates defines point coordinates for an extent by specifying the ordinate along each axis.
   template <class T>
   std::array<std::vector<T>, 3> coordinates () const
   {
     return this->asDerived().template coordinatesImpl<T>();
   }
 
-
 public:
+  /// Return number of grid vertices
+  std::uint64_t numPointsImpl () const
+  {
+    return gridView_.size(GridView::dimension);
+  }
 
-  /// Return the coordinates of all grid vertices in the order given by the indexSet
+  /// \copyref DefaultDataCollector::update.
+  void updateImpl ()
+  {
+    defaultDataCollector_.update();
+
+#if HAVE_MPI
+    int rank = -1;
+    int num_ranks = -1;
+    MPI_Comm_rank(gridView_.comm(), &rank);
+    MPI_Comm_size(gridView_.comm(), &num_ranks);
+
+    if (rank == 0) {
+      extents_.resize(num_ranks);
+      requests_.resize(num_ranks, MPI_REQUEST_NULL);
+      for (int i = 1; i < num_ranks; ++i)
+        MPI_Irecv(extents_[i].data(), extents_[i].size(), MPI_INT, i, /*tag=*/6, gridView_.comm(), &requests_[i]);
+    }
+
+    sendRequest_ = MPI_REQUEST_NULL;
+#endif
+  }
+
+  /// \copydoc DefaultDataCollector::points.
   template <class T>
   std::vector<T> pointsImpl () const
   {
     return defaultDataCollector_.template points<T>();
   }
 
-  /// Evaluate the `fct` at the corners of the elements
+  /// \copydoc DefaultDataCollector::pointData
   template <class T, class GlobalFunction>
   std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
@@ -101,30 +128,79 @@ public:
   }
 
 
-private:
+  /// Default implementation for \ref writeLocalPiece. Calculates the extent and communicates it to
+  /// rank 0.
+  template <class Writer>
+  void writeLocalPieceImpl (Writer const& writer) const
+  {
+    auto&& extent = this->extent();
 
+#if HAVE_MPI
+    int sendFlag = 0;
+    MPI_Status sendStatus;
+    MPI_Test(&sendRequest_, &sendFlag, &sendStatus);
+
+    if (sendFlag) {
+      int rank = -1;
+      MPI_Comm_rank(gridView_.comm(), &rank);
+      if (rank != 0) {
+        MPI_Isend(extent.data(), extent.size(), MPI_INT, 0, /*tag=*/6, gridView_.comm(), &sendRequest_);
+      } else {
+        extents_[0] = extent;
+      }
+    }
+#endif
+
+    writer(extent);
+  }
+
+
+  /// Receive extent from all ranks and call the `writer` with the rank's extent vector
+  template <class Writer>
+  void writePiecesImpl (Writer const& writer) const
+  {
+    writer(0, extents_[0], true);
+
+#if HAVE_MPI
+    int num_ranks = -1;
+    MPI_Comm_size(gridView_.comm(), &num_ranks);
+    for (int p = 1; p < num_ranks; ++p) {
+      int idx = -1;
+      MPI_Status status;
+      MPI_Waitany(num_ranks, requests_.data(), &idx, &status);
+      if (idx != MPI_UNDEFINED) {
+        assert(idx == status.MPI_SOURCE && status.MPI_TAG == 6);
+        writer(idx, extents_[idx], true);
+      }
+    }
+#endif
+  }
+
+
+  /// Return the \ref GridView::overlapSize
   int ghostLevelImpl () const
   {
     return ghostLevel_;
   }
 
+
+  /// Ordinate along each axis with constant \ref spacing from the \ref origin
   template <class T>
   std::array<std::vector<T>, 3> coordinatesImpl () const
   {
     auto origin = this->origin();
     auto spacing = this->spacing();
+    auto extent = this->extent();
 
     std::array<std::vector<T>, 3> ordinates{};
-    writeLocalPiece([&ordinates,&origin,&spacing](auto const& extent) {
-      for (std::size_t d = 0; d < GridView::dimension; ++d) {
-        auto s = extent[2*d+1] - extent[2*d] + 1;
-        ordinates[d].resize(s);
-        for (std::size_t i = 0; i < s; ++i)
-          ordinates[d][i] = origin[d] + (extent[2*d] + i)*spacing[d];
-      }
-    });
+    for (int d = 0; d < GridView::dimension; ++d) {
+      auto s = extent[2*d+1] - extent[2*d] + 1;
+      ordinates[d].resize(s);
+      for (int i = 0; i < s; ++i)
+        ordinates[d][i] = origin[d] + (extent[2*d] + i)*spacing[d];
+    }
 
-    for (std::size_t d = GridView::dimension; d < 3; ++d)
+    for (int d = GridView::dimension; d < 3; ++d)
       ordinates[d].resize(1, T(0));
 
     return ordinates;
@@ -133,6 +209,12 @@ private:
 private:
   DefaultDataCollector<GridView> defaultDataCollector_;
   int ghostLevel_;
+
+#if HAVE_MPI
+  mutable std::vector<std::array<int,6>> extents_;
+  mutable std::vector<MPI_Request> requests_;
+  mutable MPI_Request sendRequest_ = MPI_REQUEST_NULL;
+#endif
 };
 
 }} // end namespace Dune::experimental

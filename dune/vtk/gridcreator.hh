@@ -32,10 +32,10 @@ namespace Dune { namespace experimental
         Vtk::CellType cellType{type};
         auto refElem = referenceElement<double,Grid::dimension>(type);
 
-        std::size_t nNodes = offsets[i] - (i == 0 ? 0 : offsets[i-1]);
+        int nNodes = offsets[i] - (i == 0 ? 0 : offsets[i-1]);
         assert(nNodes == refElem.size(Grid::dimension));
         std::vector<unsigned int> vtk_cell; vtk_cell.reserve(nNodes);
-        for (std::size_t j = 0; j < nNodes; ++j)
+        for (int j = 0; j < nNodes; ++j)
           vtk_cell.push_back( connectivity[idx++] );
 
         if (cellType.noPermutation())
@@ -43,7 +43,7 @@ namespace Dune { namespace experimental
         else {
           // apply index permutation
           std::vector<unsigned int> cell(nNodes);
-          for (std::size_t j = 0; j < nNodes; ++j)
+          for (int j = 0; j < nNodes; ++j)
             cell[j] = vtk_cell[cellType.permutation(j)];
 
           factory.insertElement(type,cell);
@@ -93,10 +93,10 @@ namespace Dune { namespace experimental
         auto type = Vtk::to_geometry(types[i]);
         Vtk::CellType cellType{type};
 
-        std::size_t nNodes = offsets[i] - (i == 0 ? 0 : offsets[i-1]);
+        int nNodes = offsets[i] - (i == 0 ? 0 : offsets[i-1]);
         assert(nNodes > 0);
         std::vector<unsigned int> vtk_cell; vtk_cell.reserve(nNodes);
-        for (std::size_t j = 0; j < nNodes; ++j) {
+        for (int j = 0; j < nNodes; ++j) {
           std::size_t v_j = connectivity[idx++];
           std::size_t new_idx = unique_points[points[v_j]];
           vtk_cell.push_back(new_idx);
@@ -107,7 +107,7 @@ namespace Dune { namespace experimental
         else {
           // apply index permutation
           std::vector<unsigned int> cell(nNodes);
-          for (std::size_t j = 0; j < nNodes; ++j)
+          for (int j = 0; j < nNodes; ++j)
             cell[j] = vtk_cell[cellType.permutation(j)];
 
           factory.insertElement(type,cell);

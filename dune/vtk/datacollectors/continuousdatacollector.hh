@@ -63,7 +63,7 @@ public:
     std::int64_t old_o = 0;
     for (auto const& c : elements(gridView_, Partitions::all)) {
       Vtk::CellType cellType(c.type());
-      for (int j = 0; j < c.subEntities(dim); ++j)
+      for (unsigned int j = 0; j < c.subEntities(dim); ++j)
         cells.connectivity.push_back( std::int64_t(indexSet.subIndex(c,cellType.permutation(j),dim)) );
       cells.offsets.push_back(old_o += c.subEntities(dim));
       cells.types.push_back(cellType.type());
@@ -83,7 +83,7 @@ public:
       localFct.bind(e);
       Vtk::CellType cellType{e.type()};
       auto refElem = referenceElement(e.geometry());
-      for (int j = 0; j < e.subEntities(dim); ++j) {
+      for (unsigned int j = 0; j < e.subEntities(dim); ++j) {
         std::size_t idx = fct.ncomps() * indexSet.subIndex(e,cellType.permutation(j),dim);
         for (int comp = 0; comp < fct.ncomps(); ++comp)
           data[idx + comp] = T(localFct.evaluate(comp, refElem.position(cellType.permutation(j),dim)));

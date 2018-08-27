@@ -106,7 +106,7 @@ void VtkStructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkStructuredGridWriter<GV,DC>
-  ::writeParallelFile (std::string const& pfilename, int size) const
+  ::writeParallelFile (std::string const& pfilename, int /*size*/) const
 {
   std::string filename = pfilename + ".p" + this->fileExtension();
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);

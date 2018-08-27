@@ -87,65 +87,37 @@ namespace Dune { namespace experimental
                     GlobalFunction const& fct,
                     PositionTypes type) const;
 
+    // Collect point or cell data (depending on \ref PositionTypes) and pass
+    // the resulting vector to \ref writeAppended.
+    template <class T>
+    std::uint64_t writeDataAppended (std::ofstream& out,
+                                     GlobalFunction const& fct,
+                                     PositionTypes type) const;
+
     // Write the coordinates of the vertices to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
     void writePoints (std::ofstream& out,
                       std::vector<pos_type>& offsets) const;
 
-    // Write the element connectivity to the output stream `out`. In case
-    // of binary format, stores the streampos of XML attributes "offset" in the
-    // vector `offsets`.
-    void writeCells (std::ofstream& oust,
-                     std::vector<pos_type>& offsets) const;
-
-    // Collect point or cell data (depending on \ref PositionTypes) and pass
-    // the resulting vector to \ref writeAppended.
-    template <class T>
-    std::uint64_t writeDataAppended (std::ofstream& out,
-                                     GlobalFunction const& localFct,
-                                     PositionTypes type) const;
-
     // Collect point positions and pass the resulting vector to \ref writeAppended.
     template <class T>
     std::uint64_t writePointsAppended (std::ofstream& out) const;
-
-    // Collect element connectivity, offsets and element types, and pass the
-    // resulting vectors to \ref writeAppended.
-    std::array<std::uint64_t,3> writeCellsAppended (std::ofstream& out) const;
 
     // Write the `values` in blocks (possibly compressed) to the output
     // stream `out`. Return the written block size.
     template <class T>
     std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
 
-
-    Std::optional<std::string> getScalarName (std::vector<GlobalFunction> const& data) const
-    {
-      auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
-      return scalar != data.end() ? Std::optional<std::string>{scalar->name()} : Std::optional<std::string>{};
-    }
-
-    Std::optional<std::string> getVectorName (std::vector<GlobalFunction> const& data) const
-    {
-      auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
-      return vector != data.end() ? Std::optional<std::string>{vector->name()} : Std::optional<std::string>{};
-    }
-
-    Std::optional<std::string> getTensorName (std::vector<GlobalFunction> const& data) const
-    {
-      auto tensor = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 9; });
-      return tensor != data.end() ? Std::optional<std::string>{tensor->name()} : Std::optional<std::string>{};
-    }
-
+    /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
     std::string getNames (std::vector<GlobalFunction> const& data) const
     {
-      auto n1 = getScalarName(data);
-      auto n2 = getVectorName(data);
-      auto n3 = getTensorName(data);
-      return (n1 ? " Scalars=\"" + *n1 + "\"" : "")
-           + (n2 ? " Vectors=\"" + *n2 + "\"" : "")
-           + (n3 ? " Tensors=\"" + *n3 + "\"" : "");
+      auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
+      auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
+      auto tensor = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 9; });
+      return (scalar != data.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
+           + (vector != data.end() ? " Vectors=\"" + vector->name() + "\"" : "")
+           + (tensor != data.end() ? " Tensors=\"" + tensor->name() + "\"" : "");
     }
 
     // Returns endianness

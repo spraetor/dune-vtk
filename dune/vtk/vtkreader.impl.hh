@@ -344,7 +344,7 @@ void VtkReader<Grid,Creator>::readCellsAppended (std::ifstream& input)
 
   assert(connectivity_data.type == Vtk::INT64);
   readAppended(input, vec_connectivity, connectivity_data.offset);
-  assert(vec_connectivity.size() == vec_offsets.back());
+  assert(vec_connectivity.size() == std::size_t(vec_offsets.back()));
 }
 
 
@@ -368,7 +368,7 @@ void read_compressed (T* buffer, unsigned char* buffer_in,
   Bytef* uncompressed_buffer = reinterpret_cast<Bytef*>(buffer);
 
   input.read((char*)(compressed_buffer), compressed_space);
-  assert(input.gcount() == compressed_space);
+  assert(uLongf(input.gcount()) == compressed_space);
 
   if (uncompress(uncompressed_buffer, &uncompressed_space, compressed_buffer, compressed_space) != Z_OK) {
     std::cerr << "Zlib error while uncompressing data.\n";
@@ -429,7 +429,7 @@ void VtkReader<Grid,Creator>::readAppended (std::ifstream& input, std::vector<T>
     }
   } else {
     input.read((char*)(values.data()), size);
-    assert(input.gcount() == size);
+    assert(input.gcount() == std::streamsize(size));
   }
 }
 

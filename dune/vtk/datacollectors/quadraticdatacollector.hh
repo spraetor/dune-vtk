@@ -42,7 +42,7 @@ public:
       auto refElem = referenceElement<T,dim>(element.type());
 
       // vertices
-      for (int i = 0; i < element.subEntities(dim); ++i) {
+      for (unsigned int i = 0; i < element.subEntities(dim); ++i) {
         std::size_t idx = 3 * indexSet.subIndex(element, i, dim);
         auto v = geometry.global(refElem.position(i,dim));
         for (std::size_t j = 0; j < v.size(); ++j)
@@ -51,7 +51,7 @@ public:
           data[idx + j] = T(0);
       }
       // edge centers
-      for (int i = 0; i < element.subEntities(dim-1); ++i) {
+      for (unsigned int i = 0; i < element.subEntities(dim-1); ++i) {
         std::size_t idx = 3 * (indexSet.subIndex(element, i, dim-1) + gridView_.size(dim));
         auto v = geometry.global(refElem.position(i,dim-1));
         for (std::size_t j = 0; j < v.size(); ++j)
@@ -79,12 +79,12 @@ public:
     auto const& indexSet = gridView_.indexSet();
     for (auto const& c : elements(gridView_, Partitions::interior)) {
       Vtk::CellType cellType(c.type(), Vtk::QUADRATIC);
-      for (int j = 0; j < c.subEntities(dim); ++j) {
+      for (unsigned int j = 0; j < c.subEntities(dim); ++j) {
         int k = cellType.permutation(j);
         std::int64_t point_idx = indexSet.subIndex(c,k,dim);
         cells.connectivity.push_back(point_idx);
       }
-      for (int j = 0; j < c.subEntities(dim-1); ++j) {
+      for (unsigned int j = 0; j < c.subEntities(dim-1); ++j) {
         int k = cellType.permutation(c.subEntities(dim) + j);
         std::int64_t point_idx = (indexSet.subIndex(c,k,dim-1) + gridView_.size(dim));
         cells.connectivity.push_back(point_idx);
@@ -107,13 +107,13 @@ public:
       localFct.bind(e);
       Vtk::CellType cellType{e.type(), Vtk::QUADRATIC};
       auto refElem = referenceElement(e.geometry());
-      for (int j = 0; j < e.subEntities(dim); ++j) {
+      for (unsigned int j = 0; j < e.subEntities(dim); ++j) {
         int k = cellType.permutation(j);
         std::size_t idx = fct.ncomps() * indexSet.subIndex(e, k, dim);
         for (int comp = 0; comp < fct.ncomps(); ++comp)
           data[idx + comp] = T(localFct.evaluate(comp, refElem.position(k, dim)));
       }
-      for (int j = 0; j < e.subEntities(dim-1); ++j) {
+      for (unsigned int j = 0; j < e.subEntities(dim-1); ++j) {
         int k = cellType.permutation(e.subEntities(dim) + j);
         std::size_t idx = fct.ncomps() * (indexSet.subIndex(e, k, dim-1) + gridView_.size(dim));
         for (int comp = 0; comp < fct.ncomps(); ++comp)

@@ -64,7 +64,7 @@ void VtkUnstructuredGridWriter<GV,DC>
 
   // Write element connectivity, types and offsets
   out << "<Cells>\n";
-  this->writeCells(out, offsets);
+  writeCells(out, offsets);
   out << "</Cells>\n";
 
   out << "</Piece>\n";
@@ -92,7 +92,8 @@ void VtkUnstructuredGridWriter<GV,DC>
       blocks.push_back( this->template writePointsAppended<float>(out) );
     else
       blocks.push_back( this->template writePointsAppended<double>(out) );
-    auto bs = this->writeCellsAppended(out);
+
+    auto bs = writeCellsAppended(out);
     blocks.insert(blocks.end(), bs.begin(), bs.end());
     out << "</AppendedData>\n";
   }
@@ -168,5 +169,69 @@ void VtkUnstructuredGridWriter<GV,DC>
   out << "</PUnstructuredGrid>\n";
   out << "</VTKFile>";
 }
+
+
+template <class GV, class DC>
+void VtkUnstructuredGridWriter<GV,DC>
+  ::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
+{
+  if (format_ == Vtk::ASCII) {
+    auto cells = dataCollector_.cells();
+    out << "<DataArray type=\"Int64\" Name=\"connectivity\" format=\"ascii\">\n";
+    std::size_t i = 0;
+    for (auto const& c : cells.connectivity)
+      out << c << (++i % 6 != 0 ? ' ' : '\n');
+    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+
+    out << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\">\n";
+    i = 0;
+    for (auto const& o : cells.offsets)
+      out << o << (++i % 6 != 0 ? ' ' : '\n');
+    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+
+    out << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">\n";
+    i = 0;
+    for (auto const& t : cells.types)
+      out << int(t) << (++i % 6 != 0 ? ' ' : '\n');
+    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+  }
+  else { // Vtk::APPENDED format
+    out << "<DataArray type=\"Int64\" Name=\"connectivity\" format=\"appended\"";
+    out << " offset=";
+    offsets.push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+
+    out << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"appended\"";
+    out << " offset=";
+    offsets.push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+
+    out << "<DataArray type=\"UInt8\" Name=\"types\" format=\"appended\"";
+    out << " offset=";
+    offsets.push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+  }
+}
+
+
+template <class GV, class DC>
+std::array<std::uint64_t,3> VtkUnstructuredGridWriter<GV,DC>
+  ::writeCellsAppended (std::ofstream& out) const
+{
+  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+
+  auto cells = dataCollector_.cells();
+
+  // write conncetivity, offsets, and types
+  std::uint64_t bs0 = this->writeAppended(out, cells.connectivity);
+  std::uint64_t bs1 = this->writeAppended(out, cells.offsets);
+  std::uint64_t bs2 = this->writeAppended(out, cells.types);
+
+  return {bs0, bs1, bs2};
+}
+
 
 }} // end namespace Dune::experimental

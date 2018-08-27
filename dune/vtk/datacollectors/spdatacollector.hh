@@ -25,6 +25,7 @@ public:
   SPDataCollector (GridView const& gridView)
     : Super(gridView)
     , wholeExtent_(filledArray<6,int>(0))
+    , extent_(filledArray<6,int>(0))
     , origin_(0.0)
     , spacing_(0.0)
   {}
@@ -32,6 +33,11 @@ public:
   std::array<int, 6> const& wholeExtentImpl () const
   {
     return wholeExtent_;
+  }
+
+  std::array<int, 6> const& extentImpl () const
+  {
+    return extent_;
   }
 
   auto const& originImpl () const
@@ -48,6 +54,7 @@ public:
   {
     Super::updateImpl();
 
+    auto const& localMesh = gridView_.impl().gridLevel().localMesh();
     auto const& begin = gridView_.impl().gridLevel().globalMesh().begin();
     auto const& end = gridView_.impl().gridLevel().globalMesh().end();
     auto const& cube = gridView_.grid().domain().cube();
@@ -55,37 +62,10 @@ public:
     for (int i = 0; i < dim; ++i) {
       wholeExtent_[2*i] = begin[i];
       wholeExtent_[2*i+1] = end[i];
+      extent_[2*i] = localMesh.begin()[i];
+      extent_[2*i+1] = localMesh.end()[i];
       spacing_[i] = cube.width()[i] / (end[i] - begin[i]);
       origin_[i] = cube.origin()[i];
-    }
-  }
-
-  template <class Writer>
-  void writeLocalPieceImpl (Writer const& writer) const
-  {
-    auto extent = filledArray<6,int>(0);
-    auto const& localMesh = gridView_.impl().gridLevel().localMesh();
-    for (int i = 0; i < dim; ++i) {
-      extent[2*i] = localMesh.begin()[i];
-      extent[2*i+1] = localMesh.end()[i];
-    }
-    writer(extent);
-  }
-
-  template <class Writer>
-  void writePiecesImpl (Writer const& writer) const
-  {
-    auto extent = filledArray<6,int>(0);
-    auto const& partitionList = gridView_.impl().gridLevel().decomposition_;
-    // for (auto const& part : partitionList)
-    for (std::size_t p = 0; p < partitionList.size(); ++p)
-    {
-      auto const& part = partitionList[p];
-      for (int i = 0; i < dim; ++i) {
-        extent[2*i] = part.begin()[i];
-        extent[2*i+1] = part.begin()[i] + part.width(i);
-      }
-      writer(p, extent, true);
     }
   }
 
@@ -99,8 +79,8 @@ private:
 
 namespace Impl
 {
-  template<class GridView, class ct, int dim, template< int > class Ref, class Comm>
-  struct StructuredDataCollector<GridView, SPGrid<ct,dim,Ref,Comm>>
+  template <class GridView, class ct, int dim, template< int > class Ref, class Comm>
+  struct StructuredDataCollectorImpl<GridView, SPGrid<ct,dim,Ref,Comm>>
   {
     using type = SPDataCollector<GridView>;
   };
