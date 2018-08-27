@@ -41,7 +41,7 @@ See also the `src/` directory for more examples.
 In Dune-Grid there is a VTK writer available, that is a bit different from the
 proposed one. A comparions:
 
-| **Property*        | **Dune-Grid** | **Dune-Vtk** |
+| **Property**       | **Dune-Grid** | **Dune-Vtk** |
 | ------------------ | :-----------: | :----------: |
 | VTK version        | 0.1           | 1.0          |
 | UnstructuredGrid   | **x**         | **x**        |
