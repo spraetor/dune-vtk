@@ -56,3 +56,9 @@ proposed one. A comparions:
 | BASE64_COMPRESSED  | -             | -            |
 | APPEDED_COMPRESSED | -             | **x**        |
 | Parallel files     | **x**         | **x**        |
+| Conforming Data    | **x**         | **x**        |
+| NonConforming Data | **x**         | **x**        |
+| Quadratic Data     | -             | **x**        |
+| Subdivided Data    | **x**         | -            |
+
+
