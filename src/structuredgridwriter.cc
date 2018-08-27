@@ -23,6 +23,7 @@
 #include <dune/vtk/writers/vtkimagedatawriter.hh>
 #include <dune/vtk/writers/vtkrectilineargridwriter.hh>
 #include <dune/vtk/writers/vtkstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 #include <dune/vtk/datacollectors/yaspdatacollector.hh>
 #include <dune/vtk/datacollectors/spdatacollector.hh>
 
@@ -36,7 +37,7 @@ using int_ = std::integral_constant<int,dim>;
 template <class GridView>
 void write(std::string prefix, GridView const& gridView)
 {
-  auto fct2 = makeAnalyticGridViewFunction([](auto const& x) {
+  auto fct2 = makeAnalyticGridViewFunction([](auto const& x) -> float {
     return std::sin(10*x[0]) * (x.size() > 1 ? std::cos(10*x[1]) : 1) + (x.size() > 2 ? std::sin(10*x[2]) : 0);
   }, gridView);
 
@@ -44,21 +45,28 @@ void write(std::string prefix, GridView const& gridView)
     using Writer = VtkImageDataWriter<GridView>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "id_ascii_float32.vti", Vtk::ASCII);
+    vtkWriter.write(prefix + "id_ascii_float32.vti", Vtk::ASCII, Vtk::FLOAT32);
   }
 
   {
     using Writer = VtkRectilinearGridWriter<GridView>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "rg_ascii_float32.vtr", Vtk::ASCII);
+    vtkWriter.write(prefix + "rg_ascii_float32.vtr", Vtk::ASCII, Vtk::FLOAT32);
   }
 
   {
     using Writer = VtkStructuredGridWriter<GridView>;
     Writer vtkWriter(gridView);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII);
+    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII, Vtk::FLOAT32);
+  }
+
+  {
+    using Writer = VtkUnstructuredGridWriter<GridView>;
+    Writer vtkWriter(gridView);
+    vtkWriter.addPointData(fct2, "analytic");
+    vtkWriter.write(prefix + "ug_ascii_float32.vts", Vtk::ASCII, Vtk::FLOAT32);
   }
 }
 
@@ -67,9 +75,9 @@ void write_yaspgrid(std::integral_constant<int,dim>)
 {
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(8);
+  auto numElements = filledArray<dim,int>(16);
   GridType grid(upperRight,numElements,0,0);
-  grid.globalRefine(1);
+  grid.globalRefine(3);
 
   write("yasp_" + std::to_string(dim) + "d_", grid.leafGridView());
 }
@@ -80,7 +88,7 @@ void write_spgrid(std::integral_constant<int,dim>)
 #if HAVE_DUNE_SPGRID
   using GridType = SPGrid<double,dim, SPIsotropicRefinement>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(8);
+  auto numElements = filledArray<dim,int>(12);
   GridType grid(SPDomain<double,dim>::unitCube(),numElements);
   // grid.globalRefine(1);
 

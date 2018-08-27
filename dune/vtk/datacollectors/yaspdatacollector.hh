@@ -93,7 +93,7 @@ public:
   }
 
 
-  /// Extract the ordinates from the Coordinates object of the current level
+  /// Extract the ordinates from the coordinates object of the current level
   template <class T>
   std::array<std::vector<T>, 3> coordinatesImpl () const
   {
@@ -119,7 +119,6 @@ private:
   std::array<int, 6> extent_;
   FieldVector<ctype,3> origin_;
   FieldVector<ctype,3> spacing_;
-  std::vector<std::size_t> indexMap_;
   int level_;
 };
 

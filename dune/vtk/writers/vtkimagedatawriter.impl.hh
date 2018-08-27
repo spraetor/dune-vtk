@@ -32,7 +32,7 @@ void VtkImageDataWriter<GV,DC>
 
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile"
-      << " type=\"StructuredGrid\""
+      << " type=\"ImageData\""
       << " version=\"1.0\""
       << " byte_order=\"" << this->getEndian() << "\""
       << " header_type=\"UInt64\""
@@ -110,7 +110,7 @@ void VtkImageDataWriter<GV,DC>
   assert(out.is_open());
 
   out << "<VTKFile"
-      << " type=\"StructuredGrid\""
+      << " type=\"PImageData\""
       << " version=\"1.0\""
       << " byte_order=\"" << this->getEndian() << "\""
       << " header_type=\"UInt64\""

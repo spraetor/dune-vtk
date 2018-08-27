@@ -51,7 +51,7 @@ void writer_old (GridView const& gridView)
   for (auto const& test_case : test_cases_old) {
     t.reset();
     VTKWriter<GridView> vtkWriter(gridView, std::get<2>(test_case));
-    vtkWriter.write("/tmp/writer_old_" + std::get<0>(test_case) + ".vtu",
+    vtkWriter.write("writer_old_" + std::get<0>(test_case) + ".vtu",
       std::get<1>(test_case));
     std::cout << "  time (writer_old_" + std::get<0>(test_case) + ") = " << t.elapsed() << "\n";
   }
@@ -64,7 +64,7 @@ void writer_new (GridView const& gridView)
   experimental::VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
   for (auto const& test_case : test_cases_new) {
     t.reset();
-    vtkWriter.write("/tmp/writer_new_" + std::get<0>(test_case) + ".vtu",
+    vtkWriter.write("writer_new_" + std::get<0>(test_case) + ".vtu",
       std::get<1>(test_case), std::get<2>(test_case));
     std::cout << "  time (writer_new_" + std::get<0>(test_case) + ") = " << t.elapsed() << "\n";
   }
@@ -103,7 +103,7 @@ int main (int argc, char** argv)
     using GridType = YaspGrid<dim.value>;
     FieldVector<double,dim.value> upperRight; upperRight = 1.0;
     auto numElements = filledArray<dim.value,int>(10);
-    GridType grid(upperRight, numElements);
+    GridType grid(upperRight, numElements, 0, 0);
 
     std::cout << "DIMENSION " << dim.value << "\n";
     writer_old(grid.leafGridView());
