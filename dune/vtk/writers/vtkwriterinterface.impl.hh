@@ -51,12 +51,14 @@ void VtkWriterInterface<GV,DC>
   if (num_ranks > 1) {
     filename = p.string() + "_p" + std::to_string(rank) + "." + fileExtension();
 
+    writeSerialFile(filename);
     if (rank == 0) {
       writeParallelFile(p.string(), num_ranks);
     }
+  } else {
+    writeSerialFile(filename);
   }
 #endif
-  writeSerialFile(filename);
 }
 
 
