@@ -45,7 +45,7 @@ proposed one. A comparions:
 | ------------------ | :-----------: | :----------: |
 | VTK version        | 0.1           | 1.0          |
 | UnstructuredGrid   | **x**         | **x**        |
-| PolyData           | **x**         | -            |
+| PolyData           | (1d)          | -            |
 | StructuredGrid     | -             | **x**        |
 | RectilinearGrid    | -             | **x**        |
 | ImageData          | -             | **x**        |
