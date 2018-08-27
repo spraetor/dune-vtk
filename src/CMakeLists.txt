@@ -22,4 +22,10 @@ add_executable("structuredgridwriter" structuredgridwriter.cc)
 target_link_dune_default_libraries("structuredgridwriter")
 target_link_libraries("structuredgridwriter" dunevtk)
 
+if (dune-polygongrid_FOUND)
+  add_executable("polygongrid" polygongrid.cc)
+  target_link_dune_default_libraries("polygongrid")
+  target_link_libraries("polygongrid" dunevtk dunepolygongrid)
+endif ()
+
 add_subdirectory(test)

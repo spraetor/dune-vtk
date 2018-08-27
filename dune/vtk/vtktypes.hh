@@ -38,16 +38,16 @@ namespace Dune { namespace experimental
     enum CellTypes : std::uint8_t {
       // Linear VTK cell types
       VERTEX         = 1,
-      POLY_VERTEX    = 2, // not supported
+      /* POLY_VERTEX    = 2, // not supported */
       LINE           = 3,
-      POLY_LINE      = 4, // not supported
+      /* POLY_LINE      = 4, // not supported */
       TRIANGLE       = 5,
-      TRIANGLE_STRIP = 6, // not supported
-      POLYGON        = 7, // not supported
-      PIXEL          = 8, // not supported
+      /* TRIANGLE_STRIP = 6, // not supported */
+      POLYGON        = 7,
+      /* PIXEL          = 8, // not supported */
       QUAD           = 9,
       TETRA          = 10,
-      VOXEL          = 11, // not supported
+      /* VOXEL          = 11, // not supported */
       HEXAHEDRON     = 12,
       WEDGE          = 13,
       PYRAMID        = 14,
