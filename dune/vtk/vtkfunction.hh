@@ -3,6 +3,7 @@
 #include <type_traits>
 
 #include <dune/common/std/type_traits.hh>
+#include <dune/functions/common/signature.hh>
 #include <dune/functions/common/typeerasure.hh>
 
 namespace Dune { namespace experimental
@@ -162,14 +163,32 @@ namespace Dune { namespace experimental
     template <class F>
     using HasLocalFunction = decltype(localFunction(std::declval<F>()));
 
-  public:
     template <class F>
-    VTKFunction (F&& f, std::string name, int ncomps = 1)
+    using Signature = typename std::decay_t<F>::Signature;
+
+  public:
+    template <class F,
+      class Range = typename Functions::SignatureTraits<Signature<F>>::Range>
+    VTKFunction (F&& f, std::string name, int ncomps = 1,
+                 Vtk::DataTypes type = Vtk::Map::type<Range>)
       : Super(std::forward<F>(f))
       , name_(std::move(name))
-      , ncomps_(ncomps > 1 ? 3 : 1)
+      , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
+      , type_(type)
     {
-      assert(1 <= ncomps && ncomps <= 3);
+      static_assert(Std::is_detected<HasLocalFunction,F>::value,
+        "Requires A GridFunction to be passed to the VTKFunction.");
+    }
+
+    template <class F,
+      std::enable_if_t<not Std::is_detected<Signature,F>::value,int> = 0>
+    VTKFunction (F&& f, std::string name, int ncomps = 1,
+                 Vtk::DataTypes type = Vtk::FLOAT32)
+      : Super(std::forward<F>(f))
+      , name_(std::move(name))
+      , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
+      , type_(type)
+    {
       static_assert(Std::is_detected<HasLocalFunction,F>::value,
         "Requires A GridFunction to be passed to the VTKFunction.");
     }
@@ -194,10 +213,16 @@ namespace Dune { namespace experimental
       return ncomps_;
     }
 
+    /// Return the VTK Datatype associated with the functions range type
+    Vtk::DataTypes type () const
+    {
+      return type_;
+    }
+
   private:
     std::string name_;
-
     int ncomps_ = 1;
+    Vtk::DataTypes type_;
   };
 
 }} // end namespace Dune::experimental

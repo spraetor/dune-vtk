@@ -5,16 +5,55 @@
 namespace Dune { namespace experimental {
 namespace Vtk {
 
-std::map<std::uint8_t, GeometryType> Map::from_type = {
-  {VERTEX,     GeometryTypes::vertex },
-  {LINE,       GeometryTypes::line },
-  {TRIANGLE,   GeometryTypes::triangle },
-  {QUAD,       GeometryTypes::quadrilateral },
-  {TETRA,      GeometryTypes::tetrahedron },
-  {HEXAHEDRON, GeometryTypes::hexahedron },
-  {WEDGE,      GeometryTypes::prism },
-  {PYRAMID,    GeometryTypes::pyramid },
-};
+std::string to_string (FormatTypes type)
+{
+  switch (type) {
+    case ASCII:      return "ascii";
+    case BINARY:     return "binary";
+    case COMPRESSED: return "compressed";
+    case APPENDED:   return "appended";
+    default:
+      DUNE_THROW(RangeError, "FormatType not found.");
+      std::abort();
+  }
+}
+
+std::string to_string (DataTypes type)
+{
+  switch (type) {
+    case INT8:    return "Int8";
+    case UINT8:   return "UInt8";
+    case INT16:   return "Int16";
+    case UINT16:  return "UInt16";
+    case INT32:   return "Int32";
+    case UINT32:  return "UInt32";
+    case INT64:   return "Int64";
+    case UINT64:  return "UInt64";
+    case FLOAT32: return "Float32";
+    case FLOAT64: return "Float64";
+    default:
+      DUNE_THROW(RangeError, "DataType not found.");
+      std::abort();
+  }
+}
+
+GeometryType to_geometry (std::uint8_t cell)
+{
+  switch (cell) {
+    case VERTEX:     return GeometryTypes::vertex;
+    case LINE:       return GeometryTypes::line;
+    case TRIANGLE:   return GeometryTypes::triangle;
+    case QUAD:       return GeometryTypes::quadrilateral;
+    case TETRA:      return GeometryTypes::tetrahedron;
+    case HEXAHEDRON: return GeometryTypes::hexahedron;
+    case WEDGE:      return GeometryTypes::prism;
+    case PYRAMID:    return GeometryTypes::pyramid;
+    default:
+      DUNE_THROW(RangeError, "CellType does not map to GeometryType.");
+      std::abort();
+  }
+}
+
 
 std::map<std::string, DataTypes> Map::to_datatype = {
   {"Int8",    INT8},
@@ -29,18 +68,7 @@ std::map<std::string, DataTypes> Map::to_datatype = {
   {"Float64", FLOAT64}
 };
 
-std::map<DataTypes, std::string> Map::from_datatype = {
-  {INT8,    "Int8"},
-  {UINT8,   "UInt8"},
-  {INT16,   "Int16"},
-  {UINT16,  "UInt16"},
-  {INT32,   "Int32"},
-  {UINT32,  "UInt32"},
-  {INT64,   "Int64"},
-  {UINT64,  "UInt64"},
-  {FLOAT32, "Float32"},
-  {FLOAT64, "Float64"}
-};
+
 
 CellType::CellType (GeometryType const& t, CellParametrization parametrization)
   : noPermutation_(true)

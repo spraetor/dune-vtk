@@ -20,7 +20,7 @@
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;

@@ -8,3 +8,4 @@ Version: 0.1
 Maintainer: simon.praetorius@tu-dresden.de
 #depending on
 Depends: dune-grid dune-functions
+Suggests: dune-spgrid

@@ -16,7 +16,7 @@
 #include <dune/grid/utility/structuredgridfactory.hh>
 
 #include <dune/vtk/vtkreader.hh>
-#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::experimental;

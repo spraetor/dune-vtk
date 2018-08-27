@@ -33,7 +33,7 @@ public:
   {
     std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& vertex : vertices(gridView_)) {
+    for (auto const& vertex : vertices(gridView_, Partitions::all)) {
       std::size_t idx = 3 * indexSet.index(vertex);
       auto v = vertex.geometry().center();
       for (std::size_t j = 0; j < v.size(); ++j)
@@ -61,7 +61,7 @@ public:
     cells.types.reserve(this->numCells());
 
     std::int64_t old_o = 0;
-    for (auto const& c : elements(gridView_)) {
+    for (auto const& c : elements(gridView_, Partitions::all)) {
       Vtk::CellType cellType(c.type());
       for (int j = 0; j < c.subEntities(dim); ++j)
         cells.connectivity.push_back( std::int64_t(indexSet.subIndex(c,cellType.permutation(j),dim)) );
@@ -79,7 +79,7 @@ public:
     std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_)) {
+    for (auto const& e : elements(gridView_, Partitions::all)) {
       localFct.bind(e);
       Vtk::CellType cellType{e.type()};
       auto refElem = referenceElement(e.geometry());
