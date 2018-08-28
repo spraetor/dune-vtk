@@ -34,14 +34,14 @@ static TestCasesOld test_cases_old = {
 };
 
 
-using TestCasesNew = std::set<std::tuple<std::string,experimental::Vtk::FormatTypes,experimental::Vtk::DataTypes>>;
+using TestCasesNew = std::set<std::tuple<std::string,Vtk::FormatTypes,Vtk::DataTypes>>;
 static TestCasesNew test_cases_new = {
-  {"ascii32", experimental::Vtk::ASCII, experimental::Vtk::FLOAT32},
-  {"bin32", experimental::Vtk::BINARY, experimental::Vtk::FLOAT32},
-  // {"zlib32", experimental::Vtk::COMPRESSED, experimental::Vtk::FLOAT32},
-  // {"ascii64", experimental::Vtk::ASCII, experimental::Vtk::FLOAT64},
-  // {"bin64", experimental::Vtk::BINARY, experimental::Vtk::FLOAT64},
-  // {"zlib64", experimental::Vtk::COMPRESSED, experimental::Vtk::FLOAT64}
+  {"ascii32", Vtk::ASCII, Vtk::FLOAT32},
+  {"bin32", Vtk::BINARY, Vtk::FLOAT32},
+  // {"zlib32", Vtk::COMPRESSED, Vtk::FLOAT32},
+  // {"ascii64", Vtk::ASCII, Vtk::FLOAT64},
+  // {"bin64", Vtk::BINARY, Vtk::FLOAT64},
+  // {"zlib64", Vtk::COMPRESSED, Vtk::FLOAT64}
 };
 
 template <class GridView>
@@ -61,7 +61,7 @@ template <class GridView>
 void writer_new (GridView const& gridView)
 {
   Timer t;
-  experimental::VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
+  VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
   for (auto const& test_case : test_cases_new) {
     t.reset();
     vtkWriter.write("writer_new_" + std::get<0>(test_case) + ".vtu",

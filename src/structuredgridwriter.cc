@@ -28,7 +28,6 @@
 #include <dune/vtk/datacollectors/spdatacollector.hh>
 
 using namespace Dune;
-using namespace Dune::experimental;
 using namespace Dune::Functions;
 
 template <int dim>

@@ -6,7 +6,7 @@
 
 #include "vtklocalfunctioninterface.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// Type erasure for Legacy VTKFunction
   template <class GridView>
@@ -42,4 +42,4 @@ namespace Dune { namespace experimental
     Entity const* entity_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

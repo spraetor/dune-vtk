@@ -11,7 +11,7 @@
 
 #include "vtkwriterinterface.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// File-Writer for VTK .vtu files
   /**
@@ -67,6 +67,6 @@ namespace Dune { namespace experimental
     using Super::cellData_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune
 
 #include "vtkunstructuredgridwriter.impl.hh"

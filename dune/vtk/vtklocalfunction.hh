@@ -9,7 +9,7 @@
 #include "legacyvtkfunction.hh"
 #include "defaultvtkfunction.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   template <class GridView>
   class VtkLocalFunction
@@ -56,4 +56,4 @@ namespace Dune { namespace experimental
     std::shared_ptr<VtkLocalFunctionInterface<GridView>> localFct_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

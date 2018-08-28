@@ -6,7 +6,7 @@
 
 #include "structureddatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 #if HAVE_DUNE_SPGRID
 
@@ -88,4 +88,4 @@ namespace Impl
 }
 
 #endif // HAVE_DUNE_SPGRID
-}} // end namespace Dune::experimental
+} // end namespace Dune

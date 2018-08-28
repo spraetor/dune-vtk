@@ -4,7 +4,7 @@
 
 #include "structureddatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 // Specialization for YaspGrid
 template <class GridView>
@@ -53,10 +53,10 @@ public:
 
     for (int i = 0; i < dim; ++i) {
       wholeExtent_[2*i] = 0;
-      wholeExtent_[2*i+1] = gridView_.grid().levelSize(level_,i);
+      wholeExtent_[2*i+1] = grid(gridView_).levelSize(level_,i);
     }
 
-    auto const& gl = *gridView_.grid().begin(level_);
+    auto const& gl = *grid(gridView_).begin(level_);
     auto const& g = gl.interior[0];
     auto const& gc = *g.dataBegin();
     for (int i = 0; i < dim; ++i) {
@@ -64,7 +64,7 @@ public:
       extent_[2*i+1] = gc.max(i)+1;
     }
 
-    auto it = gridView_.grid().begin(level_);
+    auto it = grid(gridView_).begin(level_);
     initGeometry(it->coords);
   }
 
@@ -97,7 +97,7 @@ public:
   template <class T>
   std::array<std::vector<T>, 3> coordinatesImpl () const
   {
-    auto it = gridView_.grid().begin(level_);
+    auto it = grid(gridView_).begin(level_);
     auto const& coords = it->coords;
 
     std::array<std::vector<T>, 3> ordinates{};
@@ -112,6 +112,26 @@ public:
       ordinates[d].resize(1, T(0));
 
     return ordinates;
+  }
+
+
+private:
+
+  template <class G>
+  using HostGrid = decltype(std::declval<G>().hostGrid());
+
+  template <class GV,
+    std::enable_if_t<Std::is_detected<HostGrid, typename GV::Grid>::value, int> = 0>
+  auto const& grid (GV const& gridView) const
+  {
+    return gridView.grid().hostGrid();
+  }
+
+  template <class GV,
+    std::enable_if_t<not Std::is_detected<HostGrid, typename GV::Grid>::value, int> = 0>
+  auto const& grid (GV const& gridView) const
+  {
+    return gridView.grid();
   }
 
 protected:
@@ -132,4 +152,4 @@ namespace Impl
   };
 }
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

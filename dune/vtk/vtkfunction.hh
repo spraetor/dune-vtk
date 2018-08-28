@@ -8,7 +8,7 @@
 #include "vtklocalfunction.hh"
 #include "vtktypes.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   template <class GridView>
   class VtkFunction
@@ -86,4 +86,4 @@ namespace Dune { namespace experimental
     Vtk::DataTypes type_ = Vtk::FLOAT32;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

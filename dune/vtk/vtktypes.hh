@@ -7,7 +7,7 @@
 
 #include <dune/geometry/type.hh>
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   namespace Vtk
   {
@@ -113,4 +113,4 @@ namespace Dune { namespace experimental
     };
 
   } // end namespace Vtk
-}} // end namespace Dune::experimental
+} // end namespace Dune

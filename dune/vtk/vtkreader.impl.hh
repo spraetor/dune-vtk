@@ -12,7 +12,7 @@
 #include "utility/filesystem.hh"
 #include "utility/string.hh"
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 template <class Grid, class Creator>
 void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
@@ -512,4 +512,4 @@ std::map<std::string, std::string> VtkReader<Grid,Creator>::parseXml (std::strin
   return attr;
 }
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

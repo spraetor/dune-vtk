@@ -10,7 +10,7 @@
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// File-Writer for Vtk .vtu files
   template <class GridView, class DataCollector>
@@ -20,7 +20,7 @@ namespace Dune { namespace experimental
   protected:
     static constexpr int dimension = GridView::dimension;
 
-    using VtkFunction = Dune::experimental::VtkFunction<GridView>;
+    using VtkFunction = Dune::VtkFunction<GridView>;
     using pos_type = typename std::ostream::pos_type;
 
     enum PositionTypes {
@@ -136,6 +136,6 @@ namespace Dune { namespace experimental
     int compression_level = -1; // in [0,9], -1 ... use default value
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune
 
 #include "vtkwriterinterface.impl.hh"

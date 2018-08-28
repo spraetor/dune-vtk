@@ -14,7 +14,7 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/vtk/datacollectors/yaspdatacollector.hh>
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   namespace Impl
   {
@@ -63,4 +63,4 @@ namespace Dune { namespace experimental
   template <class GridView>
   using VtkWriter = typename Impl::VtkWriterImpl<GridView, typename GridView::Grid>::type;
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

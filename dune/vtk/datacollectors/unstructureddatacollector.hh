@@ -5,7 +5,7 @@
 
 #include "datacollectorinterface.hh"
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 struct Cells
 {
@@ -41,4 +41,4 @@ protected:
   using Super::gridView_;
 };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

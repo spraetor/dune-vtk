@@ -11,7 +11,7 @@
 
 #include "vtkwriterinterface.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// File-Writer for RectilinearGrid VTK .vtr files
   /**
@@ -62,6 +62,6 @@ namespace Dune { namespace experimental
     using Super::cellData_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune
 
 #include "vtkrectilineargridwriter.impl.hh"

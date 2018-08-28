@@ -24,7 +24,6 @@
 #include <dune/vtk/legacyvtkfunction.hh>
 
 using namespace Dune;
-using namespace Dune::experimental;
 using namespace Dune::Functions;
 
 int main(int argc, char** argv)

@@ -27,7 +27,6 @@
 #include <dune/vtk/datacollectors/quadraticdatacollector.hh>
 
 using namespace Dune;
-using namespace Dune::experimental;
 using namespace Dune::Functions;
 
 template <class DataCollector, class GridView, class Fct1, class Fct2>

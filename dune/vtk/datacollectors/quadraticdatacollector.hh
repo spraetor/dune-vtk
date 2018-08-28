@@ -2,7 +2,7 @@
 
 #include "unstructureddatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 
 /// Implementation of \ref DataCollector for quadratic cells, with continuous data.
@@ -132,4 +132,4 @@ protected:
   using Super::gridView_;
 };
 
-}} // end namespace Dune::extensions
+} // end namespace Dune

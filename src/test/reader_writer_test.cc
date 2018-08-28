@@ -21,7 +21,6 @@
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
-using namespace Dune::experimental;
 
 // see https://stackoverflow.com/questions/6163611/compare-two-files
 bool compare_files (std::string const& fn1, std::string const& fn2)

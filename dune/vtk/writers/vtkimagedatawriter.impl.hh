@@ -14,7 +14,7 @@
 #include <dune/vtk/utility/filesystem.hh>
 #include <dune/vtk/utility/string.hh>
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 template <class GV, class DC>
 void VtkImageDataWriter<GV,DC>
@@ -163,4 +163,4 @@ void VtkImageDataWriter<GV,DC>
   out << "</VTKFile>";
 }
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

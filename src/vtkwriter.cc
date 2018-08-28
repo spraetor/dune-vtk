@@ -10,7 +10,6 @@
 
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
-#include <dune/common/filledarray.hh>
 
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
@@ -23,7 +22,6 @@
 #include <dune/vtk/vtkwriter.hh>
 
 using namespace Dune;
-using namespace Dune::experimental;
 using namespace Dune::Functions;
 
 using TestCases = std::set<std::tuple<std::string,Vtk::FormatTypes,Vtk::DataTypes>>;

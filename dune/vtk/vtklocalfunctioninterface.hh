@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// An abstract base class for LocalFunctions
   template <class GridView>
@@ -23,4 +23,4 @@ namespace Dune { namespace experimental
     virtual ~VtkLocalFunctionInterface () = default;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

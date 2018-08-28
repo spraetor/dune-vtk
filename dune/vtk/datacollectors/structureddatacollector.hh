@@ -1,11 +1,12 @@
 #pragma once
 
 #include <array>
+#include <dune/common/filledarray.hh>
 #include <dune/common/fvector.hh>
 
 #include "continuousdatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 
 namespace Impl
@@ -228,4 +229,4 @@ protected:
 #endif
 };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

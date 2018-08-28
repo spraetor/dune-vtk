@@ -2,7 +2,7 @@
 
 #include "unstructureddatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 
 /// Implementation of \ref DataCollector for linear cells, with discontinuous data.
@@ -115,4 +115,4 @@ protected:
   std::vector<std::int64_t> indexMap_;
 };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

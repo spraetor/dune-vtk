@@ -14,7 +14,7 @@
 #include <dune/vtk/utility/filesystem.hh>
 #include <dune/vtk/utility/string.hh>
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 template <class GV, class DC>
 void VtkRectilinearGridWriter<GV,DC>
@@ -219,4 +219,4 @@ std::array<std::uint64_t,3> VtkRectilinearGridWriter<GV,DC>
   return {bs0, bs1, bs2};
 }
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

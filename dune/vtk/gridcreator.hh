@@ -10,7 +10,7 @@
 
 #include "vtktypes.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   // Create a grid where the input points and connectivity is already
   // connected correctly.
@@ -116,4 +116,4 @@ namespace Dune { namespace experimental
     }
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

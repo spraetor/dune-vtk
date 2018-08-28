@@ -2,7 +2,7 @@
 
 #include "unstructureddatacollector.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
 
 /// Implementation of \ref DataCollector for linear cells, with continuous data.
@@ -101,4 +101,4 @@ protected:
   using Super::gridView_;
 };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

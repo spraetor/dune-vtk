@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-namespace Dune { namespace experimental {
+namespace Dune {
 namespace Vtk {
 
 std::string to_string (FormatTypes type)
@@ -154,4 +154,4 @@ CellType::CellType (GeometryType const& t, CellParametrization parametrization)
   }
 }
 
-}}} // end namespace Dune::experimental::Vtk
+}} // end namespace Dune::Vtk

@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   template <class Grid, class FilerReaderImp>
   class FileReader
@@ -68,4 +68,4 @@ namespace Dune { namespace experimental
     }
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

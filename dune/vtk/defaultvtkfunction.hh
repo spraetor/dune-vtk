@@ -2,7 +2,7 @@
 
 #include "vtklocalfunctioninterface.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// Type erasure for dune-functions LocalFunction interface
   template <class GridView, class LocalFunction>
@@ -60,4 +60,4 @@ namespace Dune { namespace experimental
     LocalFunction localFct_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

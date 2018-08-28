@@ -14,7 +14,7 @@
 #include <dune/vtk/utility/filesystem.hh>
 #include <dune/vtk/utility/string.hh>
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
@@ -234,4 +234,4 @@ std::array<std::uint64_t,3> VtkUnstructuredGridWriter<GV,DC>
 }
 
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

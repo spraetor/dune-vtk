@@ -2,7 +2,7 @@
 
 #include <dune/vtk/vtktypes.hh>
 
-namespace Dune { namespace experimental {
+namespace Dune {
 
 template <class GridView, class Derived>
 class DataCollectorInterface
@@ -98,10 +98,10 @@ public: // default implementations
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_, Partitions::all)) {
       localFct.bind(e);
-      auto geometry = e.geometry();
+      auto refElem = referenceElement<T,GridView::dimension>(e.type());
       std::size_t idx = fct.ncomps() * indexSet.index(e);
       for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, geometry.center()));
+        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
       localFct.unbind();
     }
     return data;
@@ -111,4 +111,4 @@ protected:
   GridView gridView_;
 };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune

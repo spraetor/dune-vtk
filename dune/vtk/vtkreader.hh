@@ -7,7 +7,7 @@
 #include "gridcreator.hh"
 #include "vtktypes.hh"
 
-namespace Dune { namespace experimental
+namespace Dune
 {
   /// File-Reader for Vtk .vtu files
   /**
@@ -129,6 +129,6 @@ namespace Dune { namespace experimental
     std::uint64_t offset0_;
   };
 
-}} // end namespace Dune::experimental
+} // end namespace Dune
 
 #include "vtkreader.impl.hh"

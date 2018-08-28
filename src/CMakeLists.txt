@@ -22,6 +22,10 @@ add_executable("legacyvtkwriter" legacyvtkwriter.cc)
 target_link_dune_default_libraries("legacyvtkwriter")
 target_link_libraries("legacyvtkwriter" dunevtk)
 
+add_executable("geometrygrid" geometrygrid.cc)
+target_link_dune_default_libraries("geometrygrid")
+target_link_libraries("geometrygrid" dunevtk)
+
 if (dune-polygongrid_FOUND)
   add_executable("polygongrid" polygongrid.cc)
   target_link_dune_default_libraries("polygongrid")
