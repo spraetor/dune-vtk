@@ -1,40 +1,16 @@
 #pragma once
 
-#include <algorithm>
-#include <cstdint>
-#include <vector>
-
-#include "vtktypes.hh"
+#include <dune/vtk/vtktypes.hh>
 
 namespace Dune { namespace experimental {
-
-struct Cells
-{
-  std::vector<std::uint8_t> types;
-  std::vector<std::int64_t> offsets;
-  std::vector<std::int64_t> connectivity;
-};
 
 template <class GridView, class Derived>
 class DataCollectorInterface
 {
 public:
-
   DataCollectorInterface (GridView const& gridView)
     : gridView_(gridView)
   {}
-
-  /// \brief Return the number of points in the grid
-  std::uint64_t numPoints () const
-  {
-    return asDerived().numPointsImpl();
-  }
-
-  /// \brief Return the number of cells in the grid
-  std::uint64_t numCells () const
-  {
-    return asDerived().numCellsImpl();
-  }
 
   /// Update the DataCollector on the current GridView
   void update ()
@@ -46,6 +22,12 @@ public:
   int ghostLevel () const
   {
     return asDerived().ghostLevelImpl();
+  }
+
+  /// \brief Return the number of points in the grid
+  std::uint64_t numPoints () const
+  {
+    return asDerived().numPointsImpl();
   }
 
   /// \brief Return a flat vector of point coordinates
@@ -61,12 +43,6 @@ public:
     return asDerived().template pointsImpl<T>();
   }
 
-  /// \brief Return cell types, offsets, and connectivity. \see Cells
-  Cells cells () const
-  {
-    return asDerived().cellsImpl();
-  }
-
   /// \brief Return a flat vector of function values evaluated at the grid points.
   /**
    * In case of a vector valued function, flat the vector entries:
@@ -76,19 +52,18 @@ public:
    * [fct(p0)_00, fct(p0)_01, fct(p0)_02, fct(p0)_10, fct(p0)_11, fct(p0)_12, fct(p0)_20...]
    * where the tensor dimension must be 3x3 (possible extended by 0s)
    **/
-  template <class T, class GlobalFunction>
-  std::vector<T> pointData (GlobalFunction const& fct) const
+  template <class T, class VtkFunction>
+  std::vector<T> pointData (VtkFunction const& fct) const
   {
     return asDerived().template pointDataImpl<T>(fct);
   }
 
   /// \brief Return a flat vector of function values evaluated at the grid cells. \see pointData.
-  template <class T, class GlobalFunction>
-  std::vector<T> cellData (GlobalFunction const& fct) const
+  template <class T, class VtkFunction>
+  std::vector<T> cellData (VtkFunction const& fct) const
   {
     return asDerived().template cellDataImpl<T>(fct);
   }
-
 
 protected: // cast to derived type
 
@@ -102,13 +77,7 @@ protected: // cast to derived type
     return static_cast<const Derived&>(*this);
   }
 
-
-protected: // default implementations
-
-  std::uint64_t numCellsImpl () const
-  {
-    return gridView_.size(0);
-  }
+public: // default implementations
 
   void updateImpl ()
   {
@@ -121,10 +90,10 @@ protected: // default implementations
   }
 
   // Evaluate `fct` in center of cell
-  template <class T, class GlobalFunction>
-  std::vector<T> cellDataImpl (GlobalFunction const& fct) const
+  template <class T, class VtkFunction>
+  std::vector<T> cellDataImpl (VtkFunction const& fct) const
   {
-    std::vector<T> data(numCells() * fct.ncomps());
+    std::vector<T> data(gridView_.size(0) * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_, Partitions::all)) {
@@ -138,9 +107,7 @@ protected: // default implementations
     return data;
   }
 
-
 protected:
-
   GridView gridView_;
 };
 

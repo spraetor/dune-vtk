@@ -4,7 +4,6 @@
 #include <iosfwd>
 #include <map>
 
-#include <dune/vtk/datacollector.hh>
 #include <dune/vtk/filewriter.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
@@ -19,7 +18,7 @@ namespace Dune { namespace experimental
    * Requirement:
    * - DataCollector must be a model of \ref DataCollector
    **/
-  template <class GridView, class DataCollector = DefaultDataCollector<GridView>>
+  template <class GridView, class DataCollector = ContinuousDataCollector<GridView>>
   class VtkUnstructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
   {

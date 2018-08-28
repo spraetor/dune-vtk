@@ -37,9 +37,12 @@ using int_ = std::integral_constant<int,dim>;
 template <class GridView>
 void write(std::string prefix, GridView const& gridView)
 {
-  auto fct2 = makeAnalyticGridViewFunction([](auto const& x) -> float {
-    return std::sin(10*x[0]) * (x.size() > 1 ? std::cos(10*x[1]) : 1) + (x.size() > 2 ? std::sin(10*x[2]) : 0);
-  }, gridView);
+  FieldVector<double,GridView::dimension> c;
+  if (GridView::dimension > 0) c[0] = 11.0;
+  if (GridView::dimension > 1) c[1] = 7.0;
+  if (GridView::dimension > 2) c[2] = 3.0;
+
+  auto fct2 = makeAnalyticGridViewFunction([&c](auto const& x) -> float { return c.dot(x); }, gridView);
 
   {
     using Writer = VtkImageDataWriter<GridView>;

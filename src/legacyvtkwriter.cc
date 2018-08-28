@@ -27,27 +27,15 @@ using namespace Dune;
 using namespace Dune::experimental;
 using namespace Dune::Functions;
 
-#define GRID_TYPE 1
-
 int main(int argc, char** argv)
 {
   Dune::MPIHelper::instance(argc, argv);
 
   const int dim = 3;
-
-#if GRID_TYPE == 1
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
   auto numElements = filledArray<dim,int>(8);
   GridType grid(upperRight,numElements);
-#elif GRID_TYPE == 2
-  using GridType = UGGrid<dim>;
-  FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
-  FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,unsigned int>(4);
-  auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
-  auto& grid = *gridPtr;
-#endif
 
   using GridView = typename GridType::LeafGridView;
   GridView gridView = grid.leafGridView();
@@ -56,7 +44,6 @@ int main(int argc, char** argv)
   auto basis = makeBasis(gridView, lagrange<1>());
 
   std::vector<double> p1function(basis.dimension());
-
   interpolate(basis, p1function, [](auto const& x) {
     return 100*x[0] + 10*x[1] + 1*x[2];
   });
@@ -67,11 +54,5 @@ int main(int argc, char** argv)
   using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView);
   vtkWriter.addPointData(p1FctWrapped);
-
   vtkWriter.write("test_ascii_float32.vtu", Vtk::ASCII);
-  vtkWriter.write("test_binary_float32.vtu", Vtk::BINARY);
-  vtkWriter.write("test_compressed_float32.vtu", Vtk::COMPRESSED);
-  vtkWriter.write("test_ascii_float64.vtu", Vtk::ASCII, Vtk::FLOAT64);
-  vtkWriter.write("test_binary_float64.vtu", Vtk::BINARY, Vtk::FLOAT64);
-  vtkWriter.write("test_compressed_float64.vtu", Vtk::COMPRESSED, Vtk::FLOAT64);
 }

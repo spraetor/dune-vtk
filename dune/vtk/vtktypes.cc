@@ -134,7 +134,7 @@ CellType::CellType (GeometryType const& t, CellParametrization parametrization)
     }
     else if (t.isQuadrilateral()) {
       type_ = QUADRATIC_QUAD;
-      permutation_ = {0,1,3,2, 3,1,0,2}; // maybe need inverse permutation as well
+      permutation_ = {0,1,3,2, 2,1,3,0};
       noPermutation_ = false;
     }
     else if (t.isTetrahedron()) {
@@ -144,7 +144,7 @@ CellType::CellType (GeometryType const& t, CellParametrization parametrization)
     }
     else if (t.isHexahedron()) {
       type_ = QUADRATIC_HEXAHEDRON;
-      permutation_ = {0,1,3,2,4,5,7,6, 6,5,7,4,10,9,11,8,0,1,3,2}; // maybe need inverse permutation as well
+      permutation_ = {0,1,3,2,4,5,7,6, 6,5,7,4,10,9,11,8,0,1,3,2};
       noPermutation_ = false;
     }
     else {

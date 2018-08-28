@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dune/vtk/datacollector.hh>
+#include "unstructureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
@@ -8,20 +8,17 @@ namespace Dune { namespace experimental
 /// Implementation of \ref DataCollector for linear cells, with discontinuous data.
 template <class GridView>
 class DiscontinuousDataCollector
-    : public DataCollectorInterface<GridView, DiscontinuousDataCollector<GridView>>
+    : public UnstructuredDataCollectorInterface<GridView, DiscontinuousDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
   using Self = DiscontinuousDataCollector;
-  using Super = DataCollectorInterface<GridView, Self>;
-  using Super::gridView_;
+  using Super = UnstructuredDataCollectorInterface<GridView, Self>;
 
 public:
   DiscontinuousDataCollector (GridView const& gridView)
     : Super(gridView)
-  {
-    this->update();
-  }
+  {}
 
   /// Create an index map the uniquely assignes an index to each pair (element,corner)
   void updateImpl ()
@@ -47,7 +44,7 @@ public:
   template <class T>
   std::vector<T> pointsImpl () const
   {
-    std::vector<T> data(this->numPoints() * 3);
+    std::vector<T> data(numPoints_ * 3);
     auto const& indexSet = gridView_.indexSet();
     for (auto const& element : elements(gridView_, Partitions::interior)) {
       for (unsigned int i = 0; i < element.subEntities(dim); ++i) {
@@ -62,13 +59,19 @@ public:
     return data;
   }
 
+  /// Return number of grid cells
+  std::uint64_t numCellsImpl () const
+  {
+    return gridView_.size(0);
+  }
+
   /// Connect the corners of each cell. The leads to a global discontinuous grid
   Cells cellsImpl () const
   {
     Cells cells;
-    cells.connectivity.reserve(this->numPoints());
-    cells.offsets.reserve(this->numCells());
-    cells.types.reserve(this->numCells());
+    cells.connectivity.reserve(numPoints_);
+    cells.offsets.reserve(gridView_.size(0));
+    cells.types.reserve(gridView_.size(0));
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
@@ -89,7 +92,7 @@ public:
   template <class T, class GlobalFunction>
   std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    std::vector<T> data(this->numPoints() * fct.ncomps());
+    std::vector<T> data(numPoints_ * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_, Partitions::interior)) {
@@ -106,7 +109,8 @@ public:
     return data;
   }
 
-private:
+protected:
+  using Super::gridView_;
   std::uint64_t numPoints_ = 0;
   std::vector<std::int64_t> indexMap_;
 };

@@ -14,10 +14,6 @@ add_executable("datacollector" datacollector.cc)
 target_link_dune_default_libraries("datacollector")
 target_link_libraries("datacollector" dunevtk)
 
-add_executable("quadratic" quadratic.cc)
-target_link_dune_default_libraries("quadratic")
-target_link_libraries("quadratic" dunevtk)
-
 add_executable("structuredgridwriter" structuredgridwriter.cc)
 target_link_dune_default_libraries("structuredgridwriter")
 target_link_libraries("structuredgridwriter" dunevtk)

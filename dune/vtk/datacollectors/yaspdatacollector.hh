@@ -1,7 +1,8 @@
 #pragma once
 
 #include <dune/grid/yaspgrid.hh>
-#include <dune/vtk/datacollectors/structureddatacollector.hh>
+
+#include "structureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
@@ -14,7 +15,6 @@ class YaspDataCollector
 
   using Self = YaspDataCollector;
   using Super = StructuredDataCollectorInterface<GridView, Self>;
-  using Super::gridView_;
   using ctype = typename GridView::ctype;
 
 public:
@@ -114,7 +114,8 @@ public:
     return ordinates;
   }
 
-private:
+protected:
+  using Super::gridView_;
   std::array<int, 6> wholeExtent_;
   std::array<int, 6> extent_;
   FieldVector<ctype,3> origin_;

@@ -61,6 +61,6 @@ namespace Dune { namespace experimental
 
   /// Default choice for several grid types, uses the default data-collector.
   template <class GridView>
-  using VtkWriter = Impl::VtkWriterImpl<GridView, typename GridView::Grid>;
+  using VtkWriter = typename Impl::VtkWriterImpl<GridView, typename GridView::Grid>::type;
 
 }} // end namespace Dune::experimental

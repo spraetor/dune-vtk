@@ -6,6 +6,7 @@
 #include <dune/functions/common/signature.hh>
 
 #include "vtklocalfunction.hh"
+#include "vtktypes.hh"
 
 namespace Dune { namespace experimental
 {

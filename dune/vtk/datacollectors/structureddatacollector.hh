@@ -1,6 +1,9 @@
 #pragma once
 
-#include <dune/vtk/datacollectors/continuousdatacollector.hh>
+#include <array>
+#include <dune/common/fvector.hh>
+
+#include "continuousdatacollector.hh"
 
 namespace Dune { namespace experimental
 {
@@ -23,14 +26,13 @@ class StructuredDataCollectorInterface
 {
 protected:
   using Super = DataCollectorInterface<GridView, Derived>;
-  using Super::gridView_;
+  using SubDataCollector = ContinuousDataCollector<GridView>;
   using ctype = typename GridView::ctype;
 
 public:
   StructuredDataCollectorInterface (GridView const& gridView)
     : Super(gridView)
-    , defaultDataCollector_(gridView)
-    , ghostLevel_(gridView.overlapSize(0))
+    , subDataCollector_(gridView)
   {}
 
   /// Sequence of Index pairs [begin, end) for the cells in each direction
@@ -43,18 +45,6 @@ public:
   std::array<int, 6> extent () const
   {
     return this->asDerived().extentImpl();
-  }
-
-  /// Lower left corner of the grid
-  FieldVector<ctype, 3> origin () const
-  {
-    return this->asDerived().originImpl();
-  }
-
-  /// Constant grid spacing in each coordinate direction
-  FieldVector<ctype, 3> spacing () const
-  {
-    return this->asDerived().spacingImpl();
   }
 
   /// Call the `writer` with extent
@@ -71,11 +61,25 @@ public:
     this->asDerived().writePiecesImpl(writer);
   }
 
-  /// Return the number of overlapping elements
-  int ghostLevel () const
+  /// Interface for ImageData:
+  /// @{
+
+  /// Lower left corner of the grid
+  FieldVector<ctype, 3> origin () const
   {
-    return this->asDerived().ghostLevelImpl();
+    return this->asDerived().originImpl();
   }
+
+  /// Constant grid spacing in each coordinate direction
+  FieldVector<ctype, 3> spacing () const
+  {
+    return this->asDerived().spacingImpl();
+  }
+
+  /// @}
+
+  /// Interface for RectilinearGrid
+  /// @{
 
   /// The coordinates defines point coordinates for an extent by specifying the ordinate along each axis.
   template <class T>
@@ -84,17 +88,15 @@ public:
     return this->asDerived().template coordinatesImpl<T>();
   }
 
-public:
-  /// Return number of grid vertices
-  std::uint64_t numPointsImpl () const
-  {
-    return gridView_.size(GridView::dimension);
-  }
+  /// @}
+
+
+public: // default implementation:
 
   /// \copyref DefaultDataCollector::update.
   void updateImpl ()
   {
-    defaultDataCollector_.update();
+    subDataCollector_.update();
 
 #if HAVE_MPI
     int rank = -1;
@@ -113,23 +115,27 @@ public:
 #endif
   }
 
+  /// Return number of grid vertices
+  std::uint64_t numPointsImpl () const
+  {
+    return subDataCollector_.numPoints();
+  }
+
   /// \copydoc DefaultDataCollector::points.
   template <class T>
   std::vector<T> pointsImpl () const
   {
-    return defaultDataCollector_.template points<T>();
+    return subDataCollector_.template points<T>();
   }
 
   /// \copydoc DefaultDataCollector::pointData
   template <class T, class GlobalFunction>
   std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    return defaultDataCollector_.template pointData<T>(fct);
+    return subDataCollector_.template pointData<T>(fct);
   }
 
-
-  /// Default implementation for \ref writeLocalPiece. Calculates the extent and communicates it to
-  /// rank 0.
+  // Calculates the extent and communicates it to rank 0.
   template <class Writer>
   void writeLocalPieceImpl (Writer const& writer) const
   {
@@ -154,8 +160,7 @@ public:
     writer(extent);
   }
 
-
-  /// Receive extent from all ranks and call the `writer` with the rank's extent vector
+  // Receive extent from all ranks and call the `writer` with the rank's extent vector
   template <class Writer>
   void writePiecesImpl (Writer const& writer) const
   {
@@ -176,15 +181,21 @@ public:
 #endif
   }
 
-
-  /// Return the \ref GridView::overlapSize
-  int ghostLevelImpl () const
+  // Origin (0,0,0)
+  FieldVector<ctype, 3> originImpl () const
   {
-    return ghostLevel_;
+    FieldVector<ctype, 3> vec; vec = ctype(0);
+    return vec;
   }
 
+  // Grid spacing (0,0,0)
+  FieldVector<ctype, 3> spacingImpl () const
+  {
+    FieldVector<ctype, 3> vec; vec = ctype(0);
+    return vec;
+  }
 
-  /// Ordinate along each axis with constant \ref spacing from the \ref origin
+  // Ordinate along each axis with constant \ref spacing from the \ref origin
   template <class T>
   std::array<std::vector<T>, 3> coordinatesImpl () const
   {
@@ -206,9 +217,9 @@ public:
     return ordinates;
   }
 
-private:
-  DefaultDataCollector<GridView> defaultDataCollector_;
-  int ghostLevel_;
+protected:
+  using Super::gridView_;
+  SubDataCollector subDataCollector_;
 
 #if HAVE_MPI
   mutable std::vector<std::array<int,6>> extents_;

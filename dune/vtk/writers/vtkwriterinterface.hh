@@ -6,7 +6,6 @@
 
 #include <dune/common/std/optional.hh>
 
-#include <dune/vtk/datacollector.hh>
 #include <dune/vtk/filewriter.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>

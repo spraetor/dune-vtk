@@ -1,6 +1,6 @@
 #pragma once
 
-#include <dune/vtk/datacollector.hh>
+#include "unstructureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
@@ -8,13 +8,12 @@ namespace Dune { namespace experimental
 /// Implementation of \ref DataCollector for quadratic cells, with continuous data.
 template <class GridView>
 class QuadraticDataCollector
-    : public DataCollectorInterface<GridView, QuadraticDataCollector<GridView>>
+    : public UnstructuredDataCollectorInterface<GridView, QuadraticDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
   using Self = QuadraticDataCollector;
-  using Super = DataCollectorInterface<GridView, Self>;
-  using Super::gridView_;
+  using Super = UnstructuredDataCollectorInterface<GridView, Self>;
 
 public:
   QuadraticDataCollector (GridView const& gridView)
@@ -63,6 +62,12 @@ public:
     return data;
   }
 
+  /// Return number of grid cells
+  std::uint64_t numCellsImpl () const
+  {
+    return gridView_.size(0);
+  }
+
   /// \brief Return cell types, offsets, and connectivity. \see Cells
   /**
    * The cell connectivity is composed of cell vertices first and second cell edges,
@@ -92,7 +97,6 @@ public:
       cells.offsets.push_back(old_o += c.subEntities(dim)+c.subEntities(dim-1));
       cells.types.push_back(cellType.type());
     }
-
     return cells;
   }
 
@@ -123,6 +127,9 @@ public:
     }
     return data;
   }
+
+protected:
+  using Super::gridView_;
 };
 
 }} // end namespace Dune::extensions

@@ -1,23 +1,22 @@
 #pragma once
 
-#include <dune/vtk/datacollector.hh>
+#include "unstructureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
 
 /// Implementation of \ref DataCollector for linear cells, with continuous data.
 template <class GridView>
-class DefaultDataCollector
-    : public DataCollectorInterface<GridView, DefaultDataCollector<GridView>>
+class ContinuousDataCollector
+    : public UnstructuredDataCollectorInterface<GridView, ContinuousDataCollector<GridView>>
 {
   enum { dim = GridView::dimension };
 
-  using Self = DefaultDataCollector;
-  using Super = DataCollectorInterface<GridView, Self>;
-  using Super::gridView_;
+  using Self = ContinuousDataCollector;
+  using Super = UnstructuredDataCollectorInterface<GridView, Self>;
 
 public:
-  DefaultDataCollector (GridView const& gridView)
+  ContinuousDataCollector (GridView const& gridView)
     : Super(gridView)
   {}
 
@@ -31,7 +30,7 @@ public:
   template <class T>
   std::vector<T> pointsImpl () const
   {
-    std::vector<T> data(this->numPoints() * 3);
+    std::vector<T> data(gridView_.size(dim) * 3);
     auto const& indexSet = gridView_.indexSet();
     for (auto const& vertex : vertices(gridView_, Partitions::all)) {
       std::size_t idx = 3 * indexSet.index(vertex);
@@ -42,6 +41,12 @@ public:
         data[idx + j] = T(0);
     }
     return data;
+  }
+
+  /// Return number of grid cells
+  std::uint64_t numCellsImpl () const
+  {
+    return gridView_.size(0);
   }
 
   /// Return the types, offsets and connectivity of the cells, using the same connectivity as
@@ -56,9 +61,9 @@ public:
     });
 
     Cells cells;
-    cells.connectivity.reserve(this->numCells() * maxVertices);
-    cells.offsets.reserve(this->numCells());
-    cells.types.reserve(this->numCells());
+    cells.connectivity.reserve(gridView_.size(0) * maxVertices);
+    cells.offsets.reserve(gridView_.size(0));
+    cells.types.reserve(gridView_.size(0));
 
     std::int64_t old_o = 0;
     for (auto const& c : elements(gridView_, Partitions::all)) {
@@ -68,7 +73,6 @@ public:
       cells.offsets.push_back(old_o += c.subEntities(dim));
       cells.types.push_back(cellType.type());
     }
-
     return cells;
   }
 
@@ -76,7 +80,7 @@ public:
   template <class T, class GlobalFunction>
   std::vector<T> pointDataImpl (GlobalFunction const& fct) const
   {
-    std::vector<T> data(this->numPoints() * fct.ncomps());
+    std::vector<T> data(gridView_.size(dim) * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
     for (auto const& e : elements(gridView_, Partitions::all)) {
@@ -92,6 +96,9 @@ public:
     }
     return data;
   }
+
+protected:
+  using Super::gridView_;
 };
 
 }} // end namespace Dune::experimental

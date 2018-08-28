@@ -60,7 +60,7 @@ int main(int argc, char** argv)
   using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView);
   auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
-    return std::sin(10*x[0])*std::cos(10*x[1])+std::sin(10*x[2]);
+    return std::sin(10*x[0])*std::cos(10*x[1]);
   }, gridView);
 
   vtkWriter.addPointData(p1Analytic, "p1");

@@ -3,7 +3,8 @@
 #if HAVE_DUNE_SPGRID
 #include <dune/grid/spgrid.hh>
 #endif
-#include <dune/vtk/datacollectors/structureddatacollector.hh>
+
+#include "structureddatacollector.hh"
 
 namespace Dune { namespace experimental
 {
@@ -18,7 +19,6 @@ class SPDataCollector
 
   using Self = SPDataCollector;
   using Super = StructuredDataCollectorInterface<GridView, Self>;
-  using Super::gridView_;
   using ctype = typename GridView::ctype;
 
 public:
@@ -69,7 +69,8 @@ public:
     }
   }
 
-private:
+protected:
+  using Super::gridView_;
   std::array<int, 6> wholeExtent_;
   std::array<int, 6> extent_;
   FieldVector<ctype,3> spacing_;
