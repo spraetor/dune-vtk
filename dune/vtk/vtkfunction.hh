@@ -4,13 +4,13 @@
 
 #include <dune/common/std/type_traits.hh>
 #include <dune/functions/common/signature.hh>
-#include <dune/functions/common/typeerasure.hh>
+#include <dune/grid/io/file/vtk/function.hh>
 
 namespace Dune { namespace experimental
 {
   /// An abstract base class for LocalFunctions
   template <class GridView>
-  class VTKLocalFunctionInterface
+  class VtkLocalFunctionInterface
   {
   public:
     using Entity = typename GridView::template Codim<0>::Entity;
@@ -26,140 +26,208 @@ namespace Dune { namespace experimental
     virtual double evaluate (int comp, LocalCoordinate const& xi) const = 0;
 
     /// Virtual destructor
-    virtual ~VTKLocalFunctionInterface () = default;
+    virtual ~VtkLocalFunctionInterface () = default;
   };
 
 
-  template <class GridView>
-  struct VTKLocalFunctionImpl
+  /// Type erasure for dune-functions LocalFunction interface
+  template <class GridView, class LocalFunction>
+  class LocalFunctionWrapper
+      : public VtkLocalFunctionInterface<GridView>
   {
-    template <class Wrapper>
-    class Model : public Wrapper
+    using Self = LocalFunctionWrapper;
+    using Interface = VtkLocalFunctionInterface<GridView>;
+    using Entity = typename Interface::Entity;
+    using LocalCoordinate = typename Interface::LocalCoordinate;
+
+    template <class F, class D>
+    using Range = std::decay_t<decltype(std::declval<F>()(std::declval<D>()))>;
+
+    template <class F, class D>
+    using VectorValued = decltype(std::declval<Range<F,D>>()[0u]);
+
+  public:
+    template <class LocalFct, disableCopyMove<Self, LocalFct> = 0>
+    LocalFunctionWrapper (LocalFct&& localFct)
+      : localFct_(std::forward<LocalFct>(localFct))
+    {}
+
+    virtual void bind (Entity const& entity) override
     {
-    public:
-      using Wrapper::Wrapper;
-      using Function = typename Wrapper::Wrapped;
-      using Interface = VTKLocalFunctionInterface<GridView>;
+      localFct_.bind(entity);
+    }
 
-      using Entity = typename Interface::Entity;
-      using LocalCoordinate = typename Interface::LocalCoordinate;
+    virtual void unbind () override
+    {
+      localFct_.unbind();
+    }
 
-      template <class F, class D>
-      using Range = std::decay_t<decltype(std::declval<F>()(std::declval<D>()))>;
+    virtual double evaluate (int comp, LocalCoordinate const& xi) const override
+    {
+      return evaluateImpl(comp, xi, Std::is_detected<VectorValued,LocalFunction,LocalCoordinate>{});
+    }
 
-      template <class F, class D>
-      using VectorValued = decltype(std::declval<Range<F,D>>()[0u]);
+  private:
+    // Evaluate a component of a vector valued data
+    double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
+    {
+      auto y = localFct_(xi);
+      return comp < y.size() ? y[comp] : 0.0;
+    }
 
-      virtual void bind (Entity const& entity) override
-      {
-        this->get().bind(entity);
-      }
+    // Return the scalar values
+    double evaluateImpl (int comp, LocalCoordinate const& xi, std::false_type) const
+    {
+      assert(comp == 0);
+      return localFct_(xi);
+    }
 
-      virtual void unbind () override
-      {
-        this->get().unbind();
-      }
+  private:
+    LocalFunction localFct_;
+  };
 
-      virtual double evaluate (int comp, LocalCoordinate const& xi) const override
-      {
-        return evaluateImpl(comp, xi, Std::is_detected<VectorValued,Function,LocalCoordinate>{});
-      }
 
-    private:
-      // Evaluate a component of a vector valued data
-      double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
-      {
-        auto y = this->get()(xi);
-        return comp < y.size() ? y[comp] : 0.0;
-      }
+  /// Type erasure for Legacy VTKFunction
+  template <class GridView>
+  class VTKLocalFunctionWrapper
+      : public VtkLocalFunctionInterface<GridView>
+  {
+    using Interface = VtkLocalFunctionInterface<GridView>;
+    using Entity = typename Interface::Entity;
+    using LocalCoordinate = typename Interface::LocalCoordinate;
 
-      // Return the scalar values
-      double evaluateImpl (int comp, LocalCoordinate const& xi, std::false_type) const
-      {
-        assert(comp == 0);
-        return this->get()(xi);
-      }
-    };
+  public:
+    VTKLocalFunctionWrapper (std::shared_ptr<VTKFunction<GridView> const> const& fct)
+      : fct_(fct)
+    {}
+
+    virtual void bind (Entity const& entity) override
+    {
+      entity_ = &entity;
+    }
+
+    virtual void unbind () override
+    {
+      entity_ = nullptr;
+    }
+
+    virtual double evaluate (int comp, LocalCoordinate const& xi) const override
+    {
+      return fct_->evaluate(comp, *entity_, xi);
+    }
+
+  private:
+    std::shared_ptr<VTKFunction<GridView> const> fct_;
+    Entity const* entity_;
   };
 
 
   template <class GridView>
-  class VTKLocalFunction
-      : public Functions::TypeErasureBase<VTKLocalFunctionInterface<GridView>,
-                                          VTKLocalFunctionImpl<GridView>::template Model>
+  class VtkLocalFunction
   {
-    using Super = Functions::TypeErasureBase<VTKLocalFunctionInterface<GridView>,
-                                             VTKLocalFunctionImpl<GridView>::template Model>;
-
+    using Self = VtkLocalFunction;
     using Entity = typename GridView::template Codim<0>::Entity;
     using LocalCoordinate = typename Entity::Geometry::LocalCoordinate;
 
+    template <class LF, class E>
+    using HasBind = decltype(std::declval<LF>().bind(std::declval<E>()));
+
   public:
-    template <class F, disableCopyMove<VTKLocalFunction, F> = 0>
-    VTKLocalFunction (F&& f)
-      : Super(std::forward<F>(f))
+    // Store wrapper around dune-function LocalFunction
+    template <class LocalFct, disableCopyMove<Self, LocalFct> = 0,
+      std::enable_if_t<Std::is_detected<HasBind, LocalFct, Entity>::value,int> = 0>
+    VtkLocalFunction (LocalFct&& lf)
+      : localFct_(std::make_unique<LocalFunctionWrapper<GridView, std::decay_t<LocalFct>>>(std::forward<LocalFct>(lf)))
     {}
 
-    VTKLocalFunction () = default;
+    // store wrapper around legacy VTKFunction
+    VtkLocalFunction (std::shared_ptr<VTKFunction<GridView> const> const& lf)
+      : localFct_(std::make_unique<VTKLocalFunctionWrapper<GridView>>(lf))
+    {}
+
+    VtkLocalFunction () = default;
 
     /// Bind the function to the grid entity
     void bind (Entity const& entity)
     {
-      this->asInterface().bind(entity);
+      localFct_->bind(entity);
     }
 
     /// Unbind from the currently bound entity
     void unbind ()
     {
-      this->asInterface().unbind();
+      localFct_->unbind();
     }
 
     /// Evaluate the `comp` component of the Range value at local coordinate `xi`
     double evaluate (int comp, LocalCoordinate const& xi) const
     {
-      return this->asInterface().evaluate(comp, xi);
+      return localFct_->evaluate(comp, xi);
     }
+
+  private:
+    std::shared_ptr<VtkLocalFunctionInterface<GridView>> localFct_;
   };
 
   // ---------------------------------------------------------------------------
 
   /// An abstract base class for GlobalFunctions
   template <class GridView>
-  class VTKFunctionInterface
+  class VtkFunctionInterface
   {
   public:
     /// Create a local function
-    virtual VTKLocalFunction<GridView> makeLocalFunction () const = 0;
+    virtual VtkLocalFunction<GridView> makeLocalFunction () const = 0;
 
     /// Virtual destructor
-    virtual ~VTKFunctionInterface () = default;
+    virtual ~VtkFunctionInterface () = default;
   };
 
 
-  template <class GridView>
-  struct VTKFunctionImpl
+  template <class GridView, class GridViewFunction>
+  class GridViewFunctionWrapper
+      : public VtkFunctionInterface<GridView>
   {
-    template <class Wrapper>
-    class Model : public Wrapper
+    using Self = GridViewFunctionWrapper;
+
+  public:
+    template <class GVFct, disableCopyMove<Self, GVFct> = 0>
+    GridViewFunctionWrapper (GVFct&& gvFct)
+      : gvFct_(std::forward<GVFct>(gvFct))
+    {}
+
+    virtual VtkLocalFunction<GridView> makeLocalFunction () const override
     {
-    public:
-      using Wrapper::Wrapper;
-      virtual VTKLocalFunction<GridView> makeLocalFunction () const override
-      {
-        return VTKLocalFunction<GridView>{localFunction(this->get())};
-      }
-    };
+      return VtkLocalFunction<GridView>{localFunction(gvFct_)};
+    }
+
+  private:
+    GridViewFunction gvFct_;
   };
 
 
   template <class GridView>
-  class VTKFunction
-      : public Functions::TypeErasureBase<VTKFunctionInterface<GridView>,
-                                          VTKFunctionImpl<GridView>::template Model>
+  class VTKFunctionWrapper
+      : public VtkFunctionInterface<GridView>
   {
-    using Super = Functions::TypeErasureBase<VTKFunctionInterface<GridView>,
-                                             VTKFunctionImpl<GridView>::template Model>;
+  public:
+    VTKFunctionWrapper (std::shared_ptr<VTKFunction<GridView> const> const& fct)
+      : fct_(fct)
+    {}
 
+    virtual VtkLocalFunction<GridView> makeLocalFunction () const override
+    {
+      return VtkLocalFunction<GridView>{fct_};
+    }
+
+  private:
+    std::shared_ptr<VTKFunction<GridView> const> fct_;
+  };
+
+
+  template <class GridView>
+  class VtkFunction
+  {
     template <class F>
     using HasLocalFunction = decltype(localFunction(std::declval<F>()));
 
@@ -168,37 +236,42 @@ namespace Dune { namespace experimental
 
   public:
     template <class F,
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
       class Range = typename Functions::SignatureTraits<Signature<F>>::Range>
-    VTKFunction (F&& f, std::string name, int ncomps = 1,
+    VtkFunction (F&& f, std::string name, int ncomps = 1,
                  Vtk::DataTypes type = Vtk::Map::type<Range>)
-      : Super(std::forward<F>(f))
+      : fct_(std::make_unique<GridViewFunctionWrapper<GridView,std::decay_t<F>>>(std::forward<F>(f)))
       , name_(std::move(name))
       , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
       , type_(type)
-    {
-      static_assert(Std::is_detected<HasLocalFunction,F>::value,
-        "Requires A GridFunction to be passed to the VTKFunction.");
-    }
+    {}
 
     template <class F,
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
       std::enable_if_t<not Std::is_detected<Signature,F>::value,int> = 0>
-    VTKFunction (F&& f, std::string name, int ncomps = 1,
+    VtkFunction (F&& f, std::string name, int ncomps = 1,
                  Vtk::DataTypes type = Vtk::FLOAT32)
-      : Super(std::forward<F>(f))
+      : fct_(std::make_unique<GridViewFunctionWrapper<GridView,std::decay_t<F>>>(std::forward<F>(f)))
       , name_(std::move(name))
       , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
       , type_(type)
-    {
-      static_assert(Std::is_detected<HasLocalFunction,F>::value,
-        "Requires A GridFunction to be passed to the VTKFunction.");
-    }
+    {}
 
-    VTKFunction () = default;
+    VtkFunction (std::shared_ptr<VTKFunction<GridView> const> const& fct,
+                 std::string name, int ncomps = 1,
+                 Vtk::DataTypes type = Vtk::FLOAT32)
+      : fct_(std::make_unique<VTKFunctionWrapper<GridView>>(fct))
+      , name_(std::move(name))
+      , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
+      , type_(type)
+    {}
+
+    VtkFunction () = default;
 
     /// Create a LocalFunction
-    friend VTKLocalFunction<GridView> localFunction (VTKFunction const& self)
+    friend VtkLocalFunction<GridView> localFunction (VtkFunction const& self)
     {
-      return self.asInterface().makeLocalFunction();
+      return self.fct_->makeLocalFunction();
     }
 
     /// Return a name associated with the function
@@ -220,6 +293,7 @@ namespace Dune { namespace experimental
     }
 
   private:
+    std::shared_ptr<VtkFunctionInterface<GridView>> fct_;
     std::string name_;
     int ncomps_ = 1;
     Vtk::DataTypes type_;

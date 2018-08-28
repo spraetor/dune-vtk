@@ -21,8 +21,8 @@ namespace Dune { namespace experimental
   protected:
     static constexpr int dimension = GridView::dimension;
 
-    using GlobalFunction = VTKFunction<GridView>;
-    using LocalFunction = VTKLocalFunction<GridView>;
+    using GlobalFunction = VtkFunction<GridView>;
+    using LocalFunction = VtkLocalFunction<GridView>;
     using pos_type = typename std::ostream::pos_type;
 
     enum PositionTypes {
