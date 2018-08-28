@@ -65,7 +65,7 @@ int main (int argc, char** argv)
 
   using HostGrid = YaspGrid<2>;
   FieldVector<double,2> bbox = {2.0*M_PI, 2.0*M_PI};
-  std::array num = {4, 12};
+  std::array<int,2> num = {4, 12};
   HostGrid hostGrid{bbox, num}; //, std::bitset<2>{"11"}};
 
   // grid build up of mapped coordinates
