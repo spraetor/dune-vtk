@@ -4,201 +4,60 @@
 
 #include <dune/common/std/type_traits.hh>
 #include <dune/functions/common/signature.hh>
-#include <dune/functions/common/typeerasure.hh>
+
+#include "vtklocalfunction.hh"
 
 namespace Dune { namespace experimental
 {
-  /// An abstract base class for LocalFunctions
   template <class GridView>
-  class VTKLocalFunctionInterface
+  class VtkFunction
   {
-  public:
-    using Entity = typename GridView::template Codim<0>::Entity;
-    using LocalCoordinate = typename Entity::Geometry::LocalCoordinate;
-
-    /// Bind the function to the grid entity
-    virtual void bind (Entity const& entity) = 0;
-
-    /// Unbind from the currently bound entity
-    virtual void unbind () = 0;
-
-    /// Evaluate single component comp in the entity at local coordinates xi
-    virtual double evaluate (int comp, LocalCoordinate const& xi) const = 0;
-
-    /// Virtual destructor
-    virtual ~VTKLocalFunctionInterface () = default;
-  };
-
-
-  template <class GridView>
-  struct VTKLocalFunctionImpl
-  {
-    template <class Wrapper>
-    class Model : public Wrapper
-    {
-    public:
-      using Wrapper::Wrapper;
-      using Function = typename Wrapper::Wrapped;
-      using Interface = VTKLocalFunctionInterface<GridView>;
-
-      using Entity = typename Interface::Entity;
-      using LocalCoordinate = typename Interface::LocalCoordinate;
-
-      template <class F, class D>
-      using Range = std::decay_t<decltype(std::declval<F>()(std::declval<D>()))>;
-
-      template <class F, class D>
-      using VectorValued = decltype(std::declval<Range<F,D>>()[0u]);
-
-      virtual void bind (Entity const& entity) override
-      {
-        this->get().bind(entity);
-      }
-
-      virtual void unbind () override
-      {
-        this->get().unbind();
-      }
-
-      virtual double evaluate (int comp, LocalCoordinate const& xi) const override
-      {
-        return evaluateImpl(comp, xi, Std::is_detected<VectorValued,Function,LocalCoordinate>{});
-      }
-
-    private:
-      // Evaluate a component of a vector valued data
-      double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
-      {
-        auto y = this->get()(xi);
-        return comp < y.size() ? y[comp] : 0.0;
-      }
-
-      // Return the scalar values
-      double evaluateImpl (int comp, LocalCoordinate const& xi, std::false_type) const
-      {
-        assert(comp == 0);
-        return this->get()(xi);
-      }
-    };
-  };
-
-
-  template <class GridView>
-  class VTKLocalFunction
-      : public Functions::TypeErasureBase<VTKLocalFunctionInterface<GridView>,
-                                          VTKLocalFunctionImpl<GridView>::template Model>
-  {
-    using Super = Functions::TypeErasureBase<VTKLocalFunctionInterface<GridView>,
-                                             VTKLocalFunctionImpl<GridView>::template Model>;
-
-    using Entity = typename GridView::template Codim<0>::Entity;
-    using LocalCoordinate = typename Entity::Geometry::LocalCoordinate;
-
-  public:
-    template <class F, disableCopyMove<VTKLocalFunction, F> = 0>
-    VTKLocalFunction (F&& f)
-      : Super(std::forward<F>(f))
-    {}
-
-    VTKLocalFunction () = default;
-
-    /// Bind the function to the grid entity
-    void bind (Entity const& entity)
-    {
-      this->asInterface().bind(entity);
-    }
-
-    /// Unbind from the currently bound entity
-    void unbind ()
-    {
-      this->asInterface().unbind();
-    }
-
-    /// Evaluate the `comp` component of the Range value at local coordinate `xi`
-    double evaluate (int comp, LocalCoordinate const& xi) const
-    {
-      return this->asInterface().evaluate(comp, xi);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-
-  /// An abstract base class for GlobalFunctions
-  template <class GridView>
-  class VTKFunctionInterface
-  {
-  public:
-    /// Create a local function
-    virtual VTKLocalFunction<GridView> makeLocalFunction () const = 0;
-
-    /// Virtual destructor
-    virtual ~VTKFunctionInterface () = default;
-  };
-
-
-  template <class GridView>
-  struct VTKFunctionImpl
-  {
-    template <class Wrapper>
-    class Model : public Wrapper
-    {
-    public:
-      using Wrapper::Wrapper;
-      virtual VTKLocalFunction<GridView> makeLocalFunction () const override
-      {
-        return VTKLocalFunction<GridView>{localFunction(this->get())};
-      }
-    };
-  };
-
-
-  template <class GridView>
-  class VTKFunction
-      : public Functions::TypeErasureBase<VTKFunctionInterface<GridView>,
-                                          VTKFunctionImpl<GridView>::template Model>
-  {
-    using Super = Functions::TypeErasureBase<VTKFunctionInterface<GridView>,
-                                             VTKFunctionImpl<GridView>::template Model>;
-
     template <class F>
     using HasLocalFunction = decltype(localFunction(std::declval<F>()));
 
     template <class F>
-    using Signature = typename std::decay_t<F>::Signature;
+    using Domain = typename std::decay_t<F>::EntitySet::GlobalCoordinate;
+
+    template <class F>
+    using Range = std::decay_t<decltype(std::declval<F>()(std::declval<Domain<F>>()))>;
 
   public:
-    template <class F,
-      class Range = typename Functions::SignatureTraits<Signature<F>>::Range>
-    VTKFunction (F&& f, std::string name, int ncomps = 1,
-                 Vtk::DataTypes type = Vtk::Map::type<Range>)
-      : Super(std::forward<F>(f))
-      , name_(std::move(name))
-      , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
-      , type_(type)
-    {
-      static_assert(Std::is_detected<HasLocalFunction,F>::value,
-        "Requires A GridFunction to be passed to the VTKFunction.");
-    }
+    /// Constructor VtkFunction from legacy VTKFunction
+    VtkFunction (std::shared_ptr<VTKFunction<GridView> const> const& fct)
+      : localFct_(fct)
+      , name_(fct->name())
+      , ncomps_(fct->ncomps())
+      , type_(Vtk::FLOAT64)
+    {}
 
+    /// Construct VtkFunction from dune-functions GridFunction with Signature
     template <class F,
-      std::enable_if_t<not Std::is_detected<Signature,F>::value,int> = 0>
-    VTKFunction (F&& f, std::string name, int ncomps = 1,
-                 Vtk::DataTypes type = Vtk::FLOAT32)
-      : Super(std::forward<F>(f))
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
+      std::enable_if_t<Std::is_detected<Range,F>::value,int> = 0>
+    VtkFunction (F&& fct, std::string name, int ncomps = 1, Vtk::DataTypes type = Vtk::Map::type<Range<F>>)
+      : localFct_(localFunction(std::forward<F>(fct)))
       , name_(std::move(name))
-      , ncomps_(ncomps > 3 ? 9 : ncomps > 1 ? 3 : 1) // tensor, vector, or scalar
+      , ncomps_(ncomps)
       , type_(type)
-    {
-      static_assert(Std::is_detected<HasLocalFunction,F>::value,
-        "Requires A GridFunction to be passed to the VTKFunction.");
-    }
+    {}
 
-    VTKFunction () = default;
+    /// Construct VtkFunction from dune-functions GridFunction without Signature
+    template <class F,
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
+      std::enable_if_t<not Std::is_detected<Range,F>::value,int> = 0>
+    VtkFunction (F const& fct, std::string name, int ncomps = 1, Vtk::DataTypes type = Vtk::FLOAT32)
+      : localFct_(localFunction(std::forward<F>(fct)))
+      , name_(std::move(name))
+      , ncomps_(ncomps)
+      , type_(type)
+    {}
+
+    VtkFunction () = default;
 
     /// Create a LocalFunction
-    friend VTKLocalFunction<GridView> localFunction (VTKFunction const& self)
+    friend VtkLocalFunction<GridView> localFunction (VtkFunction const& self)
     {
-      return self.asInterface().makeLocalFunction();
+      return self.localFct_;
     }
 
     /// Return a name associated with the function
@@ -220,9 +79,10 @@ namespace Dune { namespace experimental
     }
 
   private:
+    VtkLocalFunction<GridView> localFct_;
     std::string name_;
     int ncomps_ = 1;
-    Vtk::DataTypes type_;
+    Vtk::DataTypes type_ = Vtk::FLOAT32;
   };
 
 }} // end namespace Dune::experimental
