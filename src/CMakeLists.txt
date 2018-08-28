@@ -22,6 +22,10 @@ add_executable("structuredgridwriter" structuredgridwriter.cc)
 target_link_dune_default_libraries("structuredgridwriter")
 target_link_libraries("structuredgridwriter" dunevtk)
 
+add_executable("legacyvtkwriter" legacyvtkwriter.cc)
+target_link_dune_default_libraries("legacyvtkwriter")
+target_link_libraries("legacyvtkwriter" dunevtk)
+
 if (dune-polygongrid_FOUND)
   add_executable("polygongrid" polygongrid.cc)
   target_link_dune_default_libraries("polygongrid")

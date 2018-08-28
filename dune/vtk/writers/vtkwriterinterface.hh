@@ -21,8 +21,7 @@ namespace Dune { namespace experimental
   protected:
     static constexpr int dimension = GridView::dimension;
 
-    using GlobalFunction = VtkFunction<GridView>;
-    using LocalFunction = VtkLocalFunction<GridView>;
+    using VtkFunction = Dune::experimental::VtkFunction<GridView>;
     using pos_type = typename std::ostream::pos_type;
 
     enum PositionTypes {
@@ -47,23 +46,19 @@ namespace Dune { namespace experimental
                 Vtk::FormatTypes format,
                 Vtk::DataTypes datatype = Vtk::FLOAT32);
 
-    /// Attach point data to the writer
-    template <class GridViewFunction>
-    VtkWriterInterface& addPointData (GridViewFunction const& gridViewFct,
-                                      std::string const& name = {},
-                                      int ncomps = 1)
+    /// Attach point data to the writer, \see VtkFunction for possible arguments
+    template <class Function, class... Args>
+    VtkWriterInterface& addPointData (Function const& fct, Args&&... args)
     {
-      pointData_.emplace_back(gridViewFct, name, ncomps);
+      pointData_.emplace_back(fct, std::forward<Args>(args)...);
       return *this;
     }
 
-    /// Attach cell data to the writer
-    template <class GridViewFunction>
-    VtkWriterInterface& addCellData (GridViewFunction const& gridViewFct,
-                                     std::string const& name = {},
-                                     int ncomps = 1)
+    /// Attach cell data to the writer, \see VtkFunction for possible arguments
+    template <class Function, class... Args>
+    VtkWriterInterface& addCellData (Function const& fct, Args&&... args)
     {
-      cellData_.emplace_back(gridViewFct, name, ncomps);
+      cellData_.emplace_back(fct, std::forward<Args>(args)...);
       return *this;
     }
 
@@ -84,14 +79,14 @@ namespace Dune { namespace experimental
     // attributes "offset" in the vector `offsets`.
     void writeData (std::ofstream& out,
                     std::vector<pos_type>& offsets,
-                    GlobalFunction const& fct,
+                    VtkFunction const& fct,
                     PositionTypes type) const;
 
     // Collect point or cell data (depending on \ref PositionTypes) and pass
     // the resulting vector to \ref writeAppended.
     template <class T>
     std::uint64_t writeDataAppended (std::ofstream& out,
-                                     GlobalFunction const& fct,
+                                     VtkFunction const& fct,
                                      PositionTypes type) const;
 
     // Write the coordinates of the vertices to the output stream `out`. In case
@@ -110,7 +105,7 @@ namespace Dune { namespace experimental
     std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
-    std::string getNames (std::vector<GlobalFunction> const& data) const
+    std::string getNames (std::vector<VtkFunction> const& data) const
     {
       auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
       auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
@@ -135,8 +130,8 @@ namespace Dune { namespace experimental
     Vtk::DataTypes datatype_;
 
     // attached data
-    std::vector<GlobalFunction> pointData_;
-    std::vector<GlobalFunction> cellData_;
+    std::vector<VtkFunction> pointData_;
+    std::vector<VtkFunction> cellData_;
 
     std::size_t const block_size = 1024*32;
     int compression_level = -1; // in [0,9], -1 ... use default value

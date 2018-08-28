@@ -65,7 +65,7 @@ void VtkWriterInterface<GV,DC>
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
   ::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
-               GlobalFunction const& fct, PositionTypes type) const
+               VtkFunction const& fct, PositionTypes type) const
 {
   out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << to_string(fct.type()) << "\""
       << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
@@ -116,7 +116,7 @@ void VtkWriterInterface<GV,DC>
 template <class GV, class DC>
   template <class T>
 std::uint64_t VtkWriterInterface<GV,DC>
-  ::writeDataAppended (std::ofstream& out, GlobalFunction const& fct, PositionTypes type) const
+  ::writeDataAppended (std::ofstream& out, VtkFunction const& fct, PositionTypes type) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
