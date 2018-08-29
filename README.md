@@ -93,14 +93,14 @@ where `FORMAT` one of
 
 `FORMAT_TYPE` one of
 
-- `ASCII` (inline ascii format),
-- `BINARY` (appended raw format), or 
-- `COMPRESSED` (appended compressed raw format), 
+- `Vtk::ASCII` (inline ascii format),
+- `Vtk::BINARY` (appended raw format), or 
+- `Vtk::COMPRESSED` (appended compressed raw format), 
 
 and `DATA_TYPE` one of 
 
-- `FLOAT32` (single precision), or 
-- `FLOAT64` (double precision).
+- `Vtk::FLOAT32` (single precision), or 
+- `Vtk::FLOAT64` (double precision).
 
 We measure the file size (per processor) and the memory requirement of ParaView
 to visualize the data.
