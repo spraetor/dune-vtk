@@ -1,7 +1,6 @@
 #install headers
 install(FILES
   continuousdatacollector.hh
-  datacollectorinterface.hh
   discontinuousdatacollector.hh
   quadraticdatacollector.hh
   spdatacollector.hh

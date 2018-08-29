@@ -77,9 +77,9 @@ void write_yaspgrid(std::integral_constant<int,dim>)
 {
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(16);
+  auto numElements = filledArray<dim,int>(12);
   GridType grid(upperRight,numElements,0,0);
-  grid.globalRefine(3);
+  grid.globalRefine(1);
 
   write("yasp_" + std::to_string(dim) + "d_", grid.leafGridView());
 }

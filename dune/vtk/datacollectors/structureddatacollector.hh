@@ -4,6 +4,7 @@
 #include <dune/common/filledarray.hh>
 #include <dune/common/fvector.hh>
 
+#include <dune/vtk/datacollectorinterface.hh>
 #include "continuousdatacollector.hh"
 
 namespace Dune

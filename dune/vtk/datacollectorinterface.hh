@@ -1,6 +1,7 @@
 #pragma once
 
-#include <dune/vtk/vtktypes.hh>
+#include <cstdint>
+#include <vector>
 
 namespace Dune {
 
@@ -24,13 +25,13 @@ public:
     return asDerived().ghostLevelImpl();
   }
 
-  /// \brief Return the number of points in the grid
+  /// Return the number of points in the grid
   std::uint64_t numPoints () const
   {
     return asDerived().numPointsImpl();
   }
 
-  /// \brief Return a flat vector of point coordinates
+  /// Return a flat vector of point coordinates
   /**
    * All coordinates are extended to 3 components and concatenated.
    * [p0_x, p0_y, p0_z, p1_x, p1_y, p1_z, ...]
@@ -43,7 +44,7 @@ public:
     return asDerived().template pointsImpl<T>();
   }
 
-  /// \brief Return a flat vector of function values evaluated at the grid points.
+  /// Return a flat vector of function values evaluated at the points.
   /**
    * In case of a vector valued function, flat the vector entries:
    * [fct(p0)_0, fct(p0)_1, fct(p0)_2, fct(p1)_0, ...]
@@ -58,7 +59,12 @@ public:
     return asDerived().template pointDataImpl<T>(fct);
   }
 
-  /// \brief Return a flat vector of function values evaluated at the grid cells. \see pointData.
+  /// Return a flat vector of function values evaluated at the cells. \see pointData.
+  /**
+   * Note: Cells might be descibred explicitly by connectivity, offsets, and types, e.g. in
+   * an UnstructuredGrid, or might be described implicitly by the grid type, e.g. in
+   * StructuredGrid.
+   */
   template <class T, class VtkFunction>
   std::vector<T> cellData (VtkFunction const& fct) const
   {
@@ -91,24 +97,12 @@ public: // default implementations
 
   // Evaluate `fct` in center of cell
   template <class T, class VtkFunction>
-  std::vector<T> cellDataImpl (VtkFunction const& fct) const
-  {
-    std::vector<T> data(gridView_.size(0) * fct.ncomps());
-    auto const& indexSet = gridView_.indexSet();
-    auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_, Partitions::all)) {
-      localFct.bind(e);
-      auto refElem = referenceElement<T,GridView::dimension>(e.type());
-      std::size_t idx = fct.ncomps() * indexSet.index(e);
-      for (int comp = 0; comp < fct.ncomps(); ++comp)
-        data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
-      localFct.unbind();
-    }
-    return data;
-  }
+  std::vector<T> cellDataImpl (VtkFunction const& fct) const;
 
 protected:
   GridView gridView_;
 };
 
 } // end namespace Dune
+
+#include "datacollectorinterface.impl.hh"

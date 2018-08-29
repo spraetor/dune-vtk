@@ -9,7 +9,7 @@
 #include <dune/vtk/vtktypes.hh>
 #include <dune/vtk/datacollectors/continuousdatacollector.hh>
 
-#include "vtkwriterinterface.hh"
+#include <dune/vtk/vtkwriterinterface.hh>
 
 namespace Dune
 {

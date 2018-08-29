@@ -8,6 +8,4 @@ install(FILES
   vtkstructuredgridwriter.impl.hh
   vtkunstructuredgridwriter.hh
   vtkunstructuredgridwriter.impl.hh
-  vtkwriterinterface.hh
-  vtkwriterinterface.impl.hh
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vtkwriter/writers)

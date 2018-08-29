@@ -24,6 +24,28 @@ namespace Dune
     {
       using type = VtkUnstructuredGridWriter<GridView>;
     };
+  }
+
+  /// \brief Default choice of VTK Writer for several grid types.
+  /**
+   * Choose a VTK writer depending on the grid type. Some specialization for standard dune-grid grids
+   * are provided, like YaspGrid and GeometrGrid.
+   *
+   * Note: Uses the default data-collector. If you want to choose a special data-collector, use
+   * the concrete write Implementation instead.
+   **/
+  template <class GridView>
+  using VtkWriter = typename Impl::VtkWriterImpl<GridView, typename GridView::Grid>::type;
+
+
+  namespace Impl
+  {
+    // A structured grid with constant spacing in x, y, and z direction.
+    template <class GridView, int dim, class Coordinates>
+    struct VtkWriterImpl<GridView, YaspGrid<dim,Coordinates>>
+    {
+      using type = VtkImageDataWriter<GridView, YaspDataCollector<GridView>>;
+    };
 
 #if HAVE_DUNE_SPGRID
     // A structured grid with constant spacing in x, y, and z direction.
@@ -33,13 +55,6 @@ namespace Dune
       using type = VtkImageDataWriter<GridView, SPDataCollector<GridView>>;
     };
 #endif
-
-    // A structured grid with constant spacing in x, y, and z direction.
-    template <class GridView, int dim, class Coordinates>
-    struct VtkWriterImpl<GridView, YaspGrid<dim,Coordinates>>
-    {
-      using type = VtkImageDataWriter<GridView, YaspDataCollector<GridView>>;
-    };
 
     // A structured grid with coordinates in x, y, and z direction with arbitrary spacing
     template <class GridView, int dim, class ct>
@@ -57,10 +72,4 @@ namespace Dune
     };
 
   } // end namespace Impl
-
-
-  /// Default choice for several grid types, uses the default data-collector.
-  template <class GridView>
-  using VtkWriter = typename Impl::VtkWriterImpl<GridView, typename GridView::Grid>::type;
-
 } // end namespace Dune

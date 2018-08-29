@@ -1,8 +1,9 @@
 #pragma once
 
-#include <array>
 #include <iosfwd>
 #include <map>
+#include <string>
+#include <vector>
 
 #include <dune/common/std/optional.hh>
 
@@ -104,15 +105,7 @@ namespace Dune
     std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
-    std::string getNames (std::vector<VtkFunction> const& data) const
-    {
-      auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
-      auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
-      auto tensor = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 9; });
-      return (scalar != data.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
-           + (vector != data.end() ? " Vectors=\"" + vector->name() + "\"" : "")
-           + (tensor != data.end() ? " Tensors=\"" + tensor->name() + "\"" : "");
-    }
+    std::string getNames (std::vector<VtkFunction> const& data) const;
 
     // Returns endianness
     std::string getEndian () const

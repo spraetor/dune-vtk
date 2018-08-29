@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "datacollectorinterface.hh"
+#include <dune/vtk/datacollectorinterface.hh>
 
 namespace Dune {
 

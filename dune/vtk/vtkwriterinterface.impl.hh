@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -234,6 +235,19 @@ std::uint64_t VtkWriterInterface<GV,DC>
   }
 
   return std::uint64_t(end_pos - begin_pos);
+}
+
+
+template <class GV, class DC>
+std::string VtkWriterInterface<GV,DC>
+  ::getNames (std::vector<VtkFunction> const& data) const
+{
+  auto scalar = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 1; });
+  auto vector = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 3; });
+  auto tensor = std::find_if(data.begin(), data.end(), [](auto const& v) { return v.ncomps() == 9; });
+  return (scalar != data.end() ? " Scalars=\"" + scalar->name() + "\"" : "")
+        + (vector != data.end() ? " Vectors=\"" + vector->name() + "\"" : "")
+        + (tensor != data.end() ? " Tensors=\"" + tensor->name() + "\"" : "");
 }
 
 } // end namespace Dune

@@ -3,6 +3,7 @@ dune_add_library("vtktypes" OBJECT
 
 #install headers
 install(FILES
+  datacollectorinterface.hh
   defaultvtkfunction.hh
   filereader.hh
   filewriter.hh
@@ -15,6 +16,8 @@ install(FILES
   vtkreader.impl.hh
   vtktypes.hh
   vtkwriter.hh
+  vtkwriterinterface.hh
+  vtkwriterinterface.impl.hh
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vtkwriter)
 
 add_subdirectory(datacollectors)
