@@ -6,14 +6,6 @@ Provides structured and unstructured file writers for the VTK XML File Formats
 that can be opened in the popular ParaView visualization application. Additionally
 a file reader is provided to import VTK files into Dune grid and data objects.
 
-## Requirements
-For the management of the grids the `dune-grid` module is required. Additionally
-for the data evaluation, the `dune-functions` module is used. 
-
-### Optional modules
-For tests and examples `dune-spgrid` and `dune-polygongrid` are suggested, that 
-support structured grid data or special element types.
-
 ## Usage
 The VTK writer works similar to the dune-grid `VTKWriter`. It needs to be bound 
 to a GridView and then data can be added to the points or cells in the grid.
@@ -92,8 +84,23 @@ vtkWriter.addPointData(fct, "fct");
 vtkWriter.write("filename.vtu", [FORMAT_TYPE], [DATA_TYPE]);
 ```
 
-where `FORMAT` one of {UnstructuredGrid,StructuredGrid,RectilinearGrid,ImageData}
-,`FORMAT_TYPE` one of {ASCII,BINARY,COMPRESSED}, and `DATA_TYPE` one of {FLOAT32,FLOAT64}.
+where `FORMAT` one of 
+
+- `UnstructuredGrid`,
+- `StructuredGrid` (structured connectivity, arbitrary coordinates),
+- `RectilinearGrid` (structured connectivity, tensor-product coordinates), or 
+- `ImageData` (structured connectivity, axis-parallel coordinates with constant grid-spacing),
+
+`FORMAT_TYPE` one of
+
+- `ASCII` (inline ascii format),
+- `BINARY` (appended raw format), or 
+- `COMPRESSED` (appended compressed raw format), 
+
+and `DATA_TYPE` one of 
+
+- `FLOAT32` (single precision), or 
+- `FLOAT64` (double precision).
 
 We measure the file size (per processor) and the memory requirement of ParaView
 to visualize the data.
