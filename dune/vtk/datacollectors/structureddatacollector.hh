@@ -165,9 +165,9 @@ public: // default implementation:
   template <class Writer>
   void writePiecesImpl (Writer const& writer) const
   {
+#if HAVE_MPI
     writer(0, extents_[0], true);
 
-#if HAVE_MPI
     int num_ranks = -1;
     MPI_Comm_size(gridView_.comm(), &num_ranks);
     for (int p = 1; p < num_ranks; ++p) {
@@ -179,6 +179,8 @@ public: // default implementation:
         writer(idx, extents_[idx], true);
       }
     }
+#else
+    writer(0, this->extent(), true);
 #endif
   }
 
