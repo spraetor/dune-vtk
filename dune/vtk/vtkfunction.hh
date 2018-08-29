@@ -3,7 +3,6 @@
 #include <type_traits>
 
 #include <dune/common/std/type_traits.hh>
-#include <dune/functions/common/signature.hh>
 
 #include "vtklocalfunction.hh"
 #include "vtktypes.hh"

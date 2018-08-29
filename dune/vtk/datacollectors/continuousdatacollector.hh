@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numeric>
 #include "unstructureddatacollector.hh"
 
 namespace Dune
