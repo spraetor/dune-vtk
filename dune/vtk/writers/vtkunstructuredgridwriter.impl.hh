@@ -197,9 +197,12 @@ void VtkUnstructuredGridWriter<GV,DC>
       << ">\n";
 
   out << "<UnstructuredGrid"
-      << " TimeValues=\"\n";
-  for (auto const& timestep : timesteps)
-    out << timestep.first << "\n";
+      << " TimeValues=\"";
+  {
+    std::size_t i = 0;
+    for (auto const& timestep : timesteps)
+      out << timestep.first << (++i % 6 != 0 ? ' ' : '\n');
+  }
   out << "\">\n";
 
   out << "<Piece"
@@ -249,7 +252,6 @@ void VtkUnstructuredGridWriter<GV,DC>
   out << "</Cells>\n";
 
   const std::size_t shift = offsets[0].size(); // number of blocks to write the grid
-  std::cout << "shift = " << shift << "\n";
 
   // Write data associated with grid points
   out << "<PointData" << this->getNames(pointData_) << ">\n";

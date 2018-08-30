@@ -1,14 +1,10 @@
 #pragma once
 
-#include <iosfwd>
-#include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
-#include <dune/common/std/optional.hh>
-
 #include <dune/vtk/filewriter.hh>
-#include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 
 namespace Dune
@@ -16,6 +12,7 @@ namespace Dune
   /// File-Writer for Vtk .vtu files
   template <class VtkWriter>
   class VtkTimeseriesWriter
+      : public FileWriter
   {
   protected:
     using Self = VtkTimeseriesWriter;
@@ -26,13 +23,16 @@ namespace Dune
     template <class... Args, disableCopyMove<Self, Args...> = 0>
     VtkTimeseriesWriter (Args&&... args)
       : vtkWriter_{std::forward<Args>(args)...}
-    {}
+    {
+      assert(vtkWriter_.format_ != Vtk::ASCII && "Timeseries writer requires APPENDED mode");
+    }
 
     /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
     void writeTimestep (double time, std::string const& fn);
 
-    // NOTE: requires a aforging call to \ref write
-    void write (std::string const& fn);
+    /// Writes all timesteps to single timeseries file.
+    // NOTE: requires an aforging call to \ref writeTimestep
+    virtual void write (std::string const& fn) override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>

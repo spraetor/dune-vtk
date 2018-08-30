@@ -32,14 +32,13 @@ using namespace Dune::Functions;
 template <class DataCollector, class GridView, class Fct1, class Fct2>
 void write_dc (std::string prefix, GridView const& gridView, Fct1 const& fct1, Fct2 const& fct2)
 {
-  VtkUnstructuredGridWriter<GridView, DataCollector> vtkWriter(gridView);
+  VtkUnstructuredGridWriter<GridView, DataCollector> vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
   vtkWriter.addPointData(fct1, "p1");
   vtkWriter.addCellData(fct1, "p0");
   vtkWriter.addPointData(fct2, "q1");
   vtkWriter.addCellData(fct2, "q0");
 
-  vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu",
-    Vtk::ASCII, Vtk::FLOAT32);
+  vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu");
 }
 
 template <class GridView>

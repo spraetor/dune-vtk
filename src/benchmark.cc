@@ -61,11 +61,10 @@ template <class GridView>
 void writer_new (GridView const& gridView)
 {
   Timer t;
-  VtkUnstructuredGridWriter<GridView> vtkWriter(gridView);
   for (auto const& test_case : test_cases_new) {
     t.reset();
-    vtkWriter.write("writer_new_" + std::get<0>(test_case) + ".vtu",
-      std::get<1>(test_case), std::get<2>(test_case));
+    VtkUnstructuredGridWriter<GridView> vtkWriter(gridView, std::get<1>(test_case), std::get<2>(test_case));
+    vtkWriter.write("writer_new_" + std::get<0>(test_case) + ".vtu");
     std::cout << "  time (writer_new_" + std::get<0>(test_case) + ") = " << t.elapsed() << "\n";
   }
 }

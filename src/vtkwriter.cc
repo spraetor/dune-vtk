@@ -54,14 +54,13 @@ void write (std::string prefix, GridView const& gridView)
   // write analytic function
   auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) { return c.dot(x); }, gridView);
 
-  VtkWriter<GridView> vtkWriter(gridView);
-  vtkWriter.addPointData(p1Interpol, "p1");
-  vtkWriter.addCellData(p1Interpol, "p0");
-  vtkWriter.addPointData(p1Analytic, "q1");
-  vtkWriter.addCellData(p1Analytic, "q0");
   for (auto const& test_case : test_cases) {
-    vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_" + std::get<0>(test_case) + ".vtu",
-      std::get<1>(test_case), std::get<2>(test_case));
+    VtkWriter<GridView> vtkWriter(gridView, std::get<1>(test_case), std::get<2>(test_case));
+    vtkWriter.addPointData(p1Interpol, "p1");
+    vtkWriter.addCellData(p1Interpol, "p0");
+    vtkWriter.addPointData(p1Analytic, "q1");
+    vtkWriter.addCellData(p1Analytic, "q0");
+    vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_" + std::get<0>(test_case) + ".vtu");
   }
 }
 

@@ -12,8 +12,6 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/filledarray.hh>
 
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
 #include <dune/grid/yaspgrid.hh>
 
@@ -26,25 +24,23 @@ using namespace Dune::Functions;
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-  using namespace BasisFactory;
-  auto basis = makeBasis(gridView, lagrange<1>());
-
-  FieldVector<double,GridView::dimension> c;
-  if (GridView::dimension > 0) c[0] = 11.0;
-  if (GridView::dimension > 1) c[1] = 7.0;
-  if (GridView::dimension > 2) c[2] = 3.0;
-
-  // write analytic function
-  auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) { return c.dot(x); }, gridView);
+  FieldVector<double,GridView::dimension> c{11.0, 7.0, 3.0};
+  auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) -> float { return c.dot(x); }, gridView);
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
-  VtkTimeseriesWriter<Writer> vtkWriter(gridView, Vtk::BINARY, Vtk::FLOAT32);
+  VtkTimeseriesWriter<Writer> seriesWriter(gridView, Vtk::BINARY, Vtk::FLOAT32);
+  seriesWriter.addPointData(p1Analytic, "q1");
+  seriesWriter.addCellData(p1Analytic, "q0");
+  std::string filename = prefix + "_" + std::to_string(GridView::dimension) + "d_binary32.vtu";
+  for (double t = 0.0; t < 5; t += 0.5) {
+    seriesWriter.writeTimestep(t, filename);
+  }
+  seriesWriter.write(filename);
+
+  Writer vtkWriter(gridView, Vtk::BINARY, Vtk::FLOAT32);
   vtkWriter.addPointData(p1Analytic, "q1");
   vtkWriter.addCellData(p1Analytic, "q0");
-  for (double t = 0.0; t < 5; t += 0.5) {
-    vtkWriter.writeTimestep(t, prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu");
-  }
-  vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu");
+  vtkWriter.write(filename);
 }
 
 int main (int argc, char** argv)
