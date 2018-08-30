@@ -87,35 +87,35 @@ namespace Dune
     /// Return the file extension of the serial file (not including the dot)
     virtual std::string fileExtension () const = 0;
 
+    /// Write points and cells in raw/compressed format to output stream
+    virtual void writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const = 0;
+
     // Write the point or cell values given by the grid function `fct` to the
     // output stream `out`. In case of binary format, stores the streampos of XML
     // attributes "offset" in the vector `offsets`.
     void writeData (std::ofstream& out,
                     std::vector<pos_type>& offsets,
                     VtkFunction const& fct,
-                    PositionTypes type) const;
+                    PositionTypes type,
+                    Std::optional<std::size_t> timestep = {}) const;
 
-    // Collect point or cell data (depending on \ref PositionTypes) and pass
-    // the resulting vector to \ref writeAppended.
-    template <class T>
-    std::uint64_t writeDataAppended (std::ofstream& out,
-                                     VtkFunction const& fct,
-                                     PositionTypes type) const;
+    // Write points-data and cell-data in raw/compressed format to output stream
+    void writeDataAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const;
 
     // Write the coordinates of the vertices to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
     void writePoints (std::ofstream& out,
-                      std::vector<pos_type>& offsets) const;
+                      std::vector<pos_type>& offsets,
+                      Std::optional<std::size_t> timestep = {}) const;
 
-    // Collect point positions and pass the resulting vector to \ref writeAppended.
-    template <class T>
-    std::uint64_t writePointsAppended (std::ofstream& out) const;
+    // Write Appended section and fillin offset values to XML attributes
+    void writeAppended (std::ofstream& out, std::vector<pos_type> const& offsets) const;
 
     // Write the `values` in blocks (possibly compressed) to the output
     // stream `out`. Return the written block size.
     template <class T>
-    std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
+    std::uint64_t writeValuesAppended (std::ofstream& out, std::vector<T> const& values) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
     std::string getNames (std::vector<VtkFunction> const& data) const;

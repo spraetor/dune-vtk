@@ -56,7 +56,7 @@ namespace Dune
     bool initialized_ = false;
 
     // block size of attached data
-    std::vector<std::uint64_t> blocksize_;
+    std::vector<std::uint64_t> blocks_;
 
     std::string filenameMesh_;
     std::vector<std::pair<double, std::string>> timesteps_;

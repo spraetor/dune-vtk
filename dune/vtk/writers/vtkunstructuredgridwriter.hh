@@ -57,15 +57,14 @@ namespace Dune
       return "vtu";
     }
 
+    virtual void writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const override;
+
     // Write the element connectivity to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
     void writeCells (std::ofstream& oust,
-                     std::vector<pos_type>& offsets) const;
-
-    // Collect element connectivity, offsets and element types, and pass the
-    // resulting vectors to \ref writeAppended.
-    std::array<std::uint64_t,3> writeCellsAppended (std::ofstream& out) const;
+                     std::vector<pos_type>& offsets,
+                     Std::optional<std::size_t> timestep = {}) const;
 
   private:
     using Super::dataCollector_;

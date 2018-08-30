@@ -49,6 +49,8 @@ namespace Dune
       return "vti";
     }
 
+    virtual void writeGridAppended (std::ofstream& /*out*/, std::vector<std::uint64_t>& /*blocks*/) const override {}
+
   private:
     using Super::dataCollector_;
     using Super::format_;

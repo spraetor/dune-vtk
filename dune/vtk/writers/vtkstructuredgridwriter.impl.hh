@@ -45,6 +45,11 @@ void VtkStructuredGridWriter<GV,DC>
     out << "<Piece Extent=\"" << join(extent.begin(), extent.end()) << "\">\n";
   });
 
+  // Write point coordinates
+  out << "<Points>\n";
+  this->writePoints(out, offsets);
+  out << "</Points>\n";
+
   // Write data associated with grid points
   out << "<PointData" << this->getNames(pointData_) << ">\n";
   for (auto const& v : pointData_)
@@ -57,50 +62,11 @@ void VtkStructuredGridWriter<GV,DC>
     this->writeData(out, offsets, v, Super::CELL_DATA);
   out << "</CellData>\n";
 
-  // Write point coordinates
-  out << "<Points>\n";
-  this->writePoints(out, offsets);
-  out << "</Points>\n";
-
   out << "</Piece>\n";
   out << "</StructuredGrid>\n";
 
-  std::vector<std::uint64_t> blocks; // size of i'th appended block
-  pos_type appended_pos = 0;
-  if (is_a(format_, Vtk::APPENDED)) {
-    out << "<AppendedData encoding=\"raw\">\n_";
-    appended_pos = out.tellp();
-    for (auto const& v : pointData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::POINT_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::POINT_DATA) );
-    }
-    for (auto const& v : cellData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::CELL_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
-    }
-
-    if (datatype_ == Vtk::FLOAT32)
-      blocks.push_back( this->template writePointsAppended<float>(out) );
-    else
-      blocks.push_back( this->template writePointsAppended<double>(out) );
-    out << "</AppendedData>\n";
-  }
-
+  this->writeAppended(out, offsets);
   out << "</VTKFile>";
-
-  // fillin offset values and block sizes
-  if (is_a(format_, Vtk::APPENDED)) {
-    pos_type offset = 0;
-    for (std::size_t i = 0; i < offsets.size(); ++i) {
-      out.seekp(offsets[i]);
-      out << '"' << offset << '"';
-      offset += pos_type(blocks[i]);
-    }
-  }
 }
 
 
@@ -126,6 +92,14 @@ void VtkStructuredGridWriter<GV,DC>
       << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
       << ">\n";
 
+  // Write points
+  out << "<PPoints>\n";
+  out << "<PDataArray"
+      << " type=\"" << to_string(datatype_) << "\""
+      << " NumberOfComponents=\"3\""
+      << " />\n";
+  out << "</PPoints>\n";
+
   // Write data associated with grid points
   out << "<PPointData" << this->getNames(pointData_) << ">\n";
   for (auto const& v : pointData_) {
@@ -148,14 +122,6 @@ void VtkStructuredGridWriter<GV,DC>
   }
   out << "</PCellData>\n";
 
-  // Write points
-  out << "<PPoints>\n";
-  out << "<PDataArray"
-      << " type=\"" << to_string(datatype_) << "\""
-      << " NumberOfComponents=\"3\""
-      << " />\n";
-  out << "</PPoints>\n";
-
   // Write piece file references
   dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, auto const& extent, bool write_extent)
   {
@@ -168,6 +134,23 @@ void VtkStructuredGridWriter<GV,DC>
 
   out << "</PStructuredGrid>\n";
   out << "</VTKFile>";
+}
+
+
+template <class GV, class DC>
+void VtkStructuredGridWriter<GV,DC>
+  ::writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const
+{
+  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+
+  // write points
+  if (datatype_ == Vtk::FLOAT32) {
+    auto points = dataCollector_.template points<float>();
+    blocks.push_back(this->writeValuesAppended(out, points));
+  } else {
+    auto points = dataCollector_.template points<double>();
+    blocks.push_back(this->writeValuesAppended(out, points));
+  }
 }
 
 } // end namespace Dune

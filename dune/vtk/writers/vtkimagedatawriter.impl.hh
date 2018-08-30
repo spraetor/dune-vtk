@@ -67,37 +67,8 @@ void VtkImageDataWriter<GV,DC>
   out << "</Piece>\n";
   out << "</ImageData>\n";
 
-  std::vector<std::uint64_t> blocks; // size of i'th appended block
-  pos_type appended_pos = 0;
-  if (is_a(format_, Vtk::APPENDED)) {
-    out << "<AppendedData encoding=\"raw\">\n_";
-    appended_pos = out.tellp();
-    for (auto const& v : pointData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::POINT_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::POINT_DATA) );
-    }
-    for (auto const& v : cellData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::CELL_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
-    }
-    out << "</AppendedData>\n";
-  }
-
+  this->writeAppended(out, offsets);
   out << "</VTKFile>";
-
-  // fillin offset values and block sizes
-  if (is_a(format_, Vtk::APPENDED)) {
-    pos_type offset = 0;
-    for (std::size_t i = 0; i < offsets.size(); ++i) {
-      out.seekp(offsets[i]);
-      out << '"' << offset << '"';
-      offset += pos_type(blocks[i]);
-    }
-  }
 }
 
 
