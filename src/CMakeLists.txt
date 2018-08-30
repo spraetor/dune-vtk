@@ -27,6 +27,10 @@ if (dune-functions_FOUND)
   add_executable("geometrygrid" geometrygrid.cc)
   target_link_dune_default_libraries("geometrygrid")
   target_link_libraries("geometrygrid" dunevtk)
+
+  add_executable("timeserieswriter" timeserieswriter.cc)
+  target_link_dune_default_libraries("timeserieswriter")
+  target_link_libraries("timeserieswriter" dunevtk)
 endif ()
 
 if (dune-polygongrid_FOUND)

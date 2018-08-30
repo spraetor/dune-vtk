@@ -22,6 +22,8 @@ namespace Dune
   class VtkUnstructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
   {
+    template <class> friend class VtkTimeseriesWriter;
+
     static constexpr int dimension = GridView::dimension;
 
     using Super = VtkWriterInterface<GridView, DataCollector>;
@@ -29,8 +31,10 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkUnstructuredGridWriter (GridView const& gridView)
-      : Super(gridView)
+    VtkUnstructuredGridWriter (GridView const& gridView,
+                               Vtk::FormatTypes format = Vtk::BINARY,
+                               Vtk::DataTypes datatype = Vtk::FLOAT32)
+      : Super(gridView, format, datatype)
     {}
 
   private:
@@ -41,6 +45,12 @@ namespace Dune
     /// with `size` the number of pieces and serial files given by `pfilename_p[i].vtu`
     /// for [i] in [0,...,size).
     virtual void writeParallelFile (std::string const& pfilename, int size) const override;
+
+    /// Write a series of timesteps in one file
+    void writeTimeseriesFile (std::string const& filename,
+                              std::string const& filenameMesh,
+                              std::vector<std::pair<double, std::string>> const& timesteps,
+                              std::vector<std::uint64_t> const& blocksize) const;
 
     virtual std::string fileExtension () const override
     {

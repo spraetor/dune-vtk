@@ -29,8 +29,10 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkRectilinearGridWriter (GridView const& gridView)
-      : Super(gridView)
+    VtkRectilinearGridWriter (GridView const& gridView,
+                              Vtk::FormatTypes format = Vtk::BINARY,
+                              Vtk::DataTypes datatype = Vtk::FLOAT32)
+      : Super(gridView, format, datatype)
     {}
 
   private:

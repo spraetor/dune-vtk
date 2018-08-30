@@ -173,6 +173,170 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
+  ::writeTimeseriesFile (std::string const& filename,
+                         std::string const& filenameMesh,
+                         std::vector<std::pair<double, std::string>> const& timesteps,
+                         std::vector<std::uint64_t> const& blocksize) const
+{
+  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
+
+  assert(is_a(format_, Vtk::APPENDED));
+  if (datatype_ == Vtk::FLOAT32)
+    out << std::setprecision(std::numeric_limits<float>::digits10+2);
+  else
+    out << std::setprecision(std::numeric_limits<double>::digits10+2);
+
+  std::vector<std::vector<pos_type>> offsets(timesteps.size()); // pos => offset
+  out << "<VTKFile"
+      << " type=\"UnstructuredGrid\""
+      << " version=\"1.0\""
+      << " byte_order=\"" << this->getEndian() << "\""
+      << " header_type=\"UInt64\""
+      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
+      << ">\n";
+
+  out << "<UnstructuredGrid"
+      << " TimeValues=\"\n";
+  for (auto const& timestep : timesteps)
+    out << timestep.first << "\n";
+  out << "\">\n";
+
+  out << "<Piece"
+      << " NumberOfPoints=\"" << dataCollector_.numPoints() << "\""
+      << " NumberOfCells=\"" << dataCollector_.numCells() << "\""
+      << ">\n";
+
+  // Write point coordinates
+  out << "<Points>\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    out << "<DataArray"
+        << " type=\"" << to_string(datatype_) << "\""
+        << " NumberOfComponents=\"3\""
+        << " TimeStep=\"" << i << "\""
+        << " format=\"appended\""
+        << " offset=";
+    offsets[i].push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+  }
+  out << "</Points>\n";
+
+  // Write element connectivity, types and offsets
+  out << "<Cells>\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    out << "<DataArray type=\"Int64\" Name=\"connectivity\" format=\"appended\""
+        << " TimeStep=\"" << i << "\""
+        << " offset=";
+    offsets[i].push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+
+    out << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"appended\""
+        << " TimeStep=\"" << i << "\""
+        << " offset=";
+    offsets[i].push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+
+    out << "<DataArray type=\"UInt8\" Name=\"types\" format=\"appended\""
+        << " TimeStep=\"" << i << "\""
+        << " offset=";
+    offsets[i].push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+  }
+  out << "</Cells>\n";
+
+  const std::size_t shift = offsets[0].size(); // number of blocks to write the grid
+  std::cout << "shift = " << shift << "\n";
+
+  // Write data associated with grid points
+  out << "<PointData" << this->getNames(pointData_) << ">\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    for (auto const& v : pointData_) {
+      out << "<DataArray"
+          << " Name=\"" << v.name() << "\""
+          << " TimeStep=\"" << i << "\""
+          << " type=\"" << to_string(datatype_) << "\""
+          << " NumberOfComponents=\"" << v.ncomps() << "\""
+          << " format=\"appended\""
+          << " offset=";
+      offsets[i].push_back(out.tellp());
+      out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+      out << "/>\n";
+    }
+  }
+  out << "</PointData>\n";
+
+  // Write data associated with grid cells
+  out << "<CellData" << this->getNames(cellData_) << ">\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    for (auto const& v : cellData_) {
+      out << "<DataArray"
+          << " Name=\"" << v.name() << "\""
+          << " TimeStep=\"" << i << "\""
+          << " type=\"" << to_string(datatype_) << "\""
+          << " NumberOfComponents=\"" << v.ncomps() << "\""
+          << " format=\"appended\""
+          << " offset=";
+      offsets[i].push_back(out.tellp());
+      out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+      out << "/>\n";
+    }
+  }
+  out << "</CellData>\n";
+
+  out << "</Piece>\n";
+  out << "</UnstructuredGrid>\n";
+
+  std::vector<std::uint64_t> blocks; // size of i'th appended block
+  pos_type appended_pos = 0;
+  out << "<AppendedData encoding=\"raw\">\n_";
+  appended_pos = out.tellp();
+
+  std::ifstream file_mesh(filenameMesh, std::ios_base::in | std::ios_base::binary);
+  out << file_mesh.rdbuf();
+  file_mesh.close();
+  assert( std::uint64_t(out.tellp()) == std::accumulate(blocksize.begin(), std::next(blocksize.begin(),shift), std::uint64_t(appended_pos)) );
+
+  for (auto const& timestep : timesteps) {
+    std::ifstream file(timestep.second, std::ios_base::in | std::ios_base::binary);
+    out << file.rdbuf();
+  }
+  out << "</AppendedData>\n";
+
+  out << "</VTKFile>";
+
+  // write correct offsets in file.
+  pos_type offset = 0;
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    offset = 0;
+    auto const& off = offsets[i];
+
+    // write mesh data offsets
+    for (std::size_t j = 0; j < shift; ++j) {
+      out.seekp(off[j]);
+      out << '"' << offset << '"';
+      offset += pos_type(blocksize[j]);
+    }
+  }
+
+  std::size_t j = shift;
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    auto const& off = offsets[i];
+
+    for (std::size_t k = shift; k < off.size(); ++k) {
+      out.seekp(off[k]);
+      out << '"' << offset << '"';
+      offset += pos_type(blocksize[j++]);
+    }
+  }
+}
+
+
+template <class GV, class DC>
+void VtkUnstructuredGridWriter<GV,DC>
   ::writeCells (std::ofstream& out, std::vector<pos_type>& offsets) const
 {
   if (format_ == Vtk::ASCII) {

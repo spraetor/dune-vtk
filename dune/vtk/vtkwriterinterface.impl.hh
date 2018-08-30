@@ -8,10 +8,6 @@
 #include <sstream>
 #include <string>
 
-#ifdef HAVE_ZLIB
-#include <zlib.h>
-#endif
-
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
@@ -23,18 +19,8 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
-  ::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
+  ::write (std::string const& fn)
 {
-  format_ = format;
-  datatype_ = datatype;
-
-#ifndef HAVE_ZLIB
-  if (format_ == Vtk::COMPRESSED) {
-    std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
-    format_ = Vtk::BINARY;
-  }
-#endif
-
   dataCollector_.update();
 
   auto p = filesystem::path(fn);

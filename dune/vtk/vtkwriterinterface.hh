@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
+
 #include <dune/common/std/optional.hh>
 
 #include <dune/vtk/filewriter.hh>
@@ -13,11 +17,17 @@
 
 namespace Dune
 {
+  // forward declaration
+  template <class VtkWriter>
+  class VtkTimeseriesWriter;
+
   /// File-Writer for Vtk .vtu files
   template <class GridView, class DataCollector>
   class VtkWriterInterface
       : public FileWriter
   {
+    template <class> friend class VtkTimeseriesWriter;
+
   protected:
     static constexpr int dimension = GridView::dimension;
 
@@ -31,20 +41,23 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkWriterInterface (GridView const& gridView)
+    VtkWriterInterface (GridView const& gridView,
+                        Vtk::FormatTypes format = Vtk::BINARY,
+                        Vtk::DataTypes datatype = Vtk::FLOAT32)
       : dataCollector_(gridView)
-    {}
-
-    /// Write the attached data to the file
-    virtual void write (std::string const& fn) override
+      , format_(format)
+      , datatype_(datatype)
     {
-      write(fn, Vtk::BINARY);
+#ifndef HAVE_ZLIB
+      if (format_ == Vtk::COMPRESSED) {
+        std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
+        format_ = Vtk::BINARY;
+      }
+#endif
     }
 
-    /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    void write (std::string const& fn,
-                Vtk::FormatTypes format,
-                Vtk::DataTypes datatype = Vtk::FLOAT32);
+    /// Write the attached data to the file
+    virtual void write (std::string const& fn) override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -112,6 +125,11 @@ namespace Dune
     {
       short i = 1;
       return (reinterpret_cast<char*>(&i)[1] == 1 ? "BigEndian" : "LittleEndian");
+    }
+
+    std::string getFileExtension () const
+    {
+      return fileExtension();
     }
 
   protected:
