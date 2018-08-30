@@ -5,19 +5,23 @@
 #include <string>
 #include <vector>
 
-#include <dune/common/std/optional.hh>
-
 #include <dune/vtk/filewriter.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 
 namespace Dune
 {
-  /// File-Writer for Vtk .vtu files
+  // forward declaration
+  template <class VtkWriter>
+  class PvdWriter;
+
+  /// Interface for file writers for the Vtk XML file formats
   template <class GridView, class DataCollector>
   class VtkWriterInterface
       : public FileWriter
   {
+    template <class> friend class PvdWriter;
+
   protected:
     static constexpr int dimension = GridView::dimension;
 
@@ -62,7 +66,7 @@ namespace Dune
       return *this;
     }
 
-  protected:
+  private:
     /// Write a serial VTK file in Unstructured format
     virtual void writeSerialFile (std::string const& filename) const = 0;
 
@@ -74,6 +78,7 @@ namespace Dune
     /// Return the file extension of the serial file (not including the dot)
     virtual std::string fileExtension () const = 0;
 
+  protected:
     // Write the point or cell values given by the grid function `fct` to the
     // output stream `out`. In case of binary format, stores the streampos of XML
     // attributes "offset" in the vector `offsets`.
@@ -114,10 +119,15 @@ namespace Dune
       return (reinterpret_cast<char*>(&i)[1] == 1 ? "BigEndian" : "LittleEndian");
     }
 
+    // provide accessor to \ref fileExtension virtual method
+    std::string getFileExtension () const
+    {
+      return fileExtension();
+    }
+
   protected:
     mutable DataCollector dataCollector_;
 
-    std::string filename_;
     Vtk::FormatTypes format_;
     Vtk::DataTypes datatype_;
 
@@ -127,6 +137,17 @@ namespace Dune
 
     std::size_t const block_size = 1024*32;
     int compression_level = -1; // in [0,9], -1 ... use default value
+  };
+
+
+  template <class Writer>
+  struct IsVtkWriter
+  {
+    template <class GV, class DC>
+    static std::uint16_t test(VtkWriterInterface<GV,DC> const&);
+    static std::uint8_t  test(...); // fall-back overload
+
+    static constexpr bool value = sizeof(decltype(test(std::declval<Writer>()))) > sizeof(std::uint8_t);
   };
 
 } // end namespace Dune

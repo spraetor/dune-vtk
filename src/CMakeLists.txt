@@ -27,6 +27,10 @@ if (dune-functions_FOUND)
   add_executable("geometrygrid" geometrygrid.cc)
   target_link_dune_default_libraries("geometrygrid")
   target_link_libraries("geometrygrid" dunevtk)
+
+  add_executable("pvdwriter" pvdwriter.cc)
+  target_link_dune_default_libraries("pvdwriter")
+  target_link_libraries("pvdwriter" dunevtk)
 endif ()
 
 if (dune-polygongrid_FOUND)
