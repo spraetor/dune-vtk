@@ -30,7 +30,7 @@ void VtkTimeseriesWriter<W>
   auto tmp = tmpDir_;
   tmp /= name.string();
 
-  vtkWriter_.dataCollector_.update();
+  vtkWriter_.update();
 
   std::string filenameBase = tmp.string();
 
@@ -60,7 +60,7 @@ void VtkTimeseriesWriter<W>
 
 template <class W>
 void VtkTimeseriesWriter<W>
-  ::write (std::string const& fn)
+  ::write (std::string const& fn) const
 {
   assert( initialized_ );
   assert( timesteps_.size() < 1000 ); // maximal number of allowed timesteps in timeseries file
@@ -96,6 +96,7 @@ void VtkTimeseriesWriter<W>
     ec = std::remove(timestep.second.c_str());
     assert(ec == 0);
   }
+  timesteps_.clear();
 }
 
 } // end namespace Dune

@@ -11,7 +11,7 @@ namespace Dune
     virtual ~FileWriter () = default;
 
     /// Write to file given by `filename`
-    virtual void write (std::string const& filename) = 0;
+    virtual void write (std::string const& filename) const = 0;
   };
 
 } // end namespace Dune

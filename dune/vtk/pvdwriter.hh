@@ -6,7 +6,7 @@
 #include <tuple>
 
 #include <dune/vtk/vtktypes.hh>
-#include <dune/vtk/vtkwriterinterface.hh>
+// #include <dune/vtk/vtkwriterinterface.hh>
 
 namespace Dune
 {
@@ -16,26 +16,20 @@ namespace Dune
   {
     using Self = PvdWriter;
 
-    static_assert(IsVtkWriter<VtkWriter>::value, "Writer must implement the VtkWriterInterface.");
+    // static_assert(IsVtkWriter<VtkWriter>::value, "Writer must implement the VtkWriterInterface.");
 
   public:
     /// Constructor, creates a VtkWriter with constructor arguments forwarded
     template <class... Args, disableCopyMove<Self,Args...> = 0>
     explicit PvdWriter (Args&&... args)
       : vtkWriter_{std::forward<Args>(args)...}
-    {}
-
-    /// Write the attached data to the file
-    void write (double time, std::string const& fn)
     {
-      write(time, fn, Vtk::BINARY);
+      format_ = vtkWriter_.getFormat();
+      datatype_ = vtkWriter_.getDatatype();
     }
 
-    /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    void write (double time,
-                std::string const& fn,
-                Vtk::FormatTypes format,
-                Vtk::DataTypes datatype = Vtk::FLOAT32);
+    /// Write the attached data to the file
+    void write (double time, std::string const& fn) const;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -59,9 +53,10 @@ namespace Dune
 
   protected:
     VtkWriter vtkWriter_;
-    std::vector<std::pair<double, std::string>> timeSeries_;
     Vtk::FormatTypes format_;
     Vtk::DataTypes datatype_;
+
+    mutable std::vector<std::pair<double, std::string>> timesteps_;
   };
 
 } // end namespace Dune

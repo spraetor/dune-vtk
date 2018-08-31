@@ -5,15 +5,11 @@
 #include <string>
 #include <vector>
 
-<<<<<<< HEAD
 #ifdef HAVE_ZLIB
 #include <zlib.h>
 #endif
 
 #include <dune/common/std/optional.hh>
-
-=======
->>>>>>> feature/pvdwriter
 #include <dune/vtk/filewriter.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
@@ -64,7 +60,7 @@ namespace Dune
     }
 
     /// Write the attached data to the file
-    virtual void write (std::string const& fn) override;
+    virtual void write (std::string const& fn) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -139,6 +135,21 @@ namespace Dune
     std::string getFileExtension () const
     {
       return fileExtension();
+    }
+
+    Vtk::FormatTypes getFormat () const
+    {
+      return format_;
+    }
+
+    Vtk::DataTypes getDatatype () const
+    {
+      return datatype_;
+    }
+
+    void update ()
+    {
+      dataCollector_.update();
     }
 
   protected:

@@ -19,7 +19,7 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
-  ::write (std::string const& fn)
+  ::write (std::string const& fn) const
 {
   dataCollector_.update();
 

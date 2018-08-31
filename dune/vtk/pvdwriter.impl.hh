@@ -9,23 +9,15 @@ namespace Dune {
 
 template <class W>
 void PvdWriter<W>
-  ::write (double time, std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
+  ::write (double time, std::string const& fn) const
 {
-  format_ = format;
-  datatype_ = datatype;
-
-#ifndef HAVE_ZLIB
-  if (format_ == Vtk::COMPRESSED)
-    format_ = Vtk::BINARY;
-#endif
-
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();
   p /= name.string();
 
   std::string ext = "." + vtkWriter_.getFileExtension();
-  std::string filename = p.string() + "_t" + std::to_string(timeSeries_.size());
+  std::string filename = p.string() + "_t" + std::to_string(timesteps_.size());
 
   int rank = 0;
   int num_ranks = 1;
@@ -36,8 +28,8 @@ void PvdWriter<W>
     ext = ".p" + vtkWriter_.getFileExtension();
 #endif
 
-  timeSeries_.emplace_back(time, filename + ext);
-  vtkWriter_.write(filename + ext, format_, datatype_);
+  timesteps_.emplace_back(time, filename + ext);
+  vtkWriter_.write(filename + ext);
 
   if (rank == 0)
     writeFile(time, p.string() + ".pvd");
@@ -67,7 +59,7 @@ void PvdWriter<W>
   out << "<Collection>\n";
 
   // Write all timesteps
-  for (auto const& timestep : timeSeries_) {
+  for (auto const& timestep : timesteps_) {
     out << "<DataSet"
         << " timestep=\"" << timestep.first << "\""
         << " part=\"0\""

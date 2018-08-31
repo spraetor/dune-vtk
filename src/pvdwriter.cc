@@ -18,8 +18,8 @@
 
 #include <dune/grid/yaspgrid.hh>
 
-#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 #include <dune/vtk/pvdwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::Functions;
@@ -39,13 +39,12 @@ void write (std::string prefix, GridView const& gridView)
   auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) { return c.dot(x); }, gridView);
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
-  PvdWriter<Writer> pvdWriter(gridView);
+  PvdWriter<Writer> pvdWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
 
   pvdWriter.addPointData(p1Analytic, "p1");
   pvdWriter.addCellData(p1Analytic, "p0");
   for (double t = 0.0; t < 10.0; t += 1.0) {
-    pvdWriter.write(t, prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu",
-      Vtk::ASCII, Vtk::FLOAT32);
+    pvdWriter.write(t, prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu");
   }
 }
 

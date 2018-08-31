@@ -57,7 +57,7 @@ namespace Dune
 
     /// Writes all timesteps to single timeseries file.
     // NOTE: requires an aforging call to \ref writeTimestep
-    virtual void write (std::string const& fn) override;
+    virtual void write (std::string const& fn) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -84,8 +84,8 @@ namespace Dune
     // block size of attached data
     std::vector<std::uint64_t> blocks_;
 
-    std::string filenameMesh_;
-    std::vector<std::pair<double, std::string>> timesteps_;
+    mutable std::string filenameMesh_;
+    mutable std::vector<std::pair<double, std::string>> timesteps_;
   };
 
 } // end namespace Dune
