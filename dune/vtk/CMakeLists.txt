@@ -4,16 +4,21 @@ dune_add_library("vtktypes" OBJECT
 #install headers
 install(FILES
   datacollectorinterface.hh
+  datacollectorinterface.impl.hh
   defaultvtkfunction.hh
   filereader.hh
   filewriter.hh
   gridcreator.hh
   legacyvtkfunction.hh
+  pvdwriter.hh
+  pvdwriter.impl.hh
   vtkfunction.hh
   vtklocalfunction.hh
   vtklocalfunctioninterface.hh
   vtkreader.hh
   vtkreader.impl.hh
+  vtktimeserieswriter.hh
+  vtktimeserieswriter.impl.hh
   vtktypes.hh
   vtkwriter.hh
   vtkwriterinterface.hh
