@@ -31,6 +31,10 @@ if (dune-functions_FOUND)
   add_executable("timeserieswriter" timeserieswriter.cc)
   target_link_dune_default_libraries("timeserieswriter")
   target_link_libraries("timeserieswriter" dunevtk)
+
+  add_executable("pvdwriter" pvdwriter.cc)
+  target_link_dune_default_libraries("pvdwriter")
+  target_link_libraries("pvdwriter" dunevtk)
 endif ()
 
 if (dune-polygongrid_FOUND)
