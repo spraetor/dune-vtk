@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   std::shared_ptr<VTKFunction<GridView> const> p1FctWrapped(new P1Function(gridView, p1function, "p1"));
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
-  Writer vtkWriter(gridView);
+  Writer vtkWriter(gridView, Vtk::ASCII);
   vtkWriter.addPointData(p1FctWrapped);
-  vtkWriter.write("test_ascii_float32.vtu", Vtk::ASCII);
+  vtkWriter.write("test_ascii_float32.vtu");
 }

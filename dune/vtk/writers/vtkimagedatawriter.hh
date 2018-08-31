@@ -29,8 +29,10 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkImageDataWriter (GridView const& gridView)
-      : Super(gridView)
+    VtkImageDataWriter (GridView const& gridView,
+                        Vtk::FormatTypes format = Vtk::BINARY,
+                        Vtk::DataTypes datatype = Vtk::FLOAT32)
+      : Super(gridView, format, datatype)
     {}
 
   private:
@@ -46,6 +48,8 @@ namespace Dune
     {
       return "vti";
     }
+
+    virtual void writeGridAppended (std::ofstream& /*out*/, std::vector<std::uint64_t>& /*blocks*/) const override {}
 
   private:
     using Super::dataCollector_;

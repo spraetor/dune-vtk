@@ -53,10 +53,10 @@ void write (std::string prefix, GridView const& gridView)
 
   auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) { return c.dot(x); }, gridView);
 
-  VtkWriter<GridView> vtkWriter(gridView);
+  VtkWriter<GridView> vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
   vtkWriter.addPointData(p1Analytic, "q1");
   vtkWriter.addCellData(p1Analytic, "q0");
-  vtkWriter.write(prefix + "_ascii.vtu", Vtk::ASCII, Vtk::FLOAT32);
+  vtkWriter.write(prefix + "_ascii.vtu");
 }
 
 int main (int argc, char** argv)

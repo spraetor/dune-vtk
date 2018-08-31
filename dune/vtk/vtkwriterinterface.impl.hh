@@ -8,10 +8,6 @@
 #include <sstream>
 #include <string>
 
-#ifdef HAVE_ZLIB
-#include <zlib.h>
-#endif
-
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
@@ -23,18 +19,8 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
-  ::write (std::string const& fn, Vtk::FormatTypes format, Vtk::DataTypes datatype)
+  ::write (std::string const& fn)
 {
-  format_ = format;
-  datatype_ = datatype;
-
-#ifndef HAVE_ZLIB
-  if (format_ == Vtk::COMPRESSED) {
-    std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
-    format_ = Vtk::BINARY;
-  }
-#endif
-
   dataCollector_.update();
 
   auto p = filesystem::path(fn);
@@ -44,21 +30,21 @@ void VtkWriterInterface<GV,DC>
 
   std::string filename = p.string() + "." + fileExtension();
 
+  int rank = 0;
+  int num_ranks = 1;
+
 #ifdef HAVE_MPI
-  int rank = -1;
-  int num_ranks = -1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-  if (num_ranks > 1) {
+  if (num_ranks > 1)
     filename = p.string() + "_p" + std::to_string(rank) + "." + fileExtension();
+#endif
 
-    writeSerialFile(filename);
-    if (rank == 0) {
-      writeParallelFile(p.string(), num_ranks);
-    }
-  } else {
-    writeSerialFile(filename);
-  }
+  writeSerialFile(filename);
+
+#ifdef HAVE_MPI
+  if (num_ranks > 1 && rank == 0)
+    writeParallelFile(p.string(), num_ranks);
 #endif
 }
 
@@ -66,12 +52,16 @@ void VtkWriterInterface<GV,DC>
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
   ::writeData (std::ofstream& out, std::vector<pos_type>& offsets,
-               VtkFunction const& fct, PositionTypes type) const
+               VtkFunction const& fct, PositionTypes type,
+               Std::optional<std::size_t> timestep) const
 {
   out << "<DataArray Name=\"" << fct.name() << "\" type=\"" << to_string(fct.type()) << "\""
-      << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
+      << " NumberOfComponents=\"" << fct.ncomps() << "\" format=\"" << (format_ == Vtk::ASCII ? "ascii\"" : "appended\"");
+  if (timestep)
+    out << " TimeStep=\"" << *timestep << "\"";
 
   if (format_ == Vtk::ASCII) {
+    out << ">\n";
     std::size_t i = 0;
     if (type == POINT_DATA) {
       auto data = dataCollector_.template pointData<double>(fct);
@@ -94,12 +84,16 @@ void VtkWriterInterface<GV,DC>
 
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
-  ::writePoints (std::ofstream& out, std::vector<pos_type>& offsets) const
+  ::writePoints (std::ofstream& out, std::vector<pos_type>& offsets,
+                Std::optional<std::size_t> timestep) const
 {
   out << "<DataArray type=\"" << to_string(datatype_) << "\""
-      << " NumberOfComponents=\"3\" format=\"" << (format_ == Vtk::ASCII ? "ascii\">\n" : "appended\"");
+      << " NumberOfComponents=\"3\" format=\"" << (format_ == Vtk::ASCII ? "ascii\"" : "appended\"");
+  if (timestep)
+    out << " TimeStep=\"" << *timestep << "\"";
 
   if (format_ == Vtk::ASCII) {
+    out << ">\n";
     auto points = dataCollector_.template points<double>();
     std::size_t i = 0;
     for (auto const& v : points)
@@ -113,33 +107,44 @@ void VtkWriterInterface<GV,DC>
   }
 }
 
-
 template <class GV, class DC>
-  template <class T>
-std::uint64_t VtkWriterInterface<GV,DC>
-  ::writeDataAppended (std::ofstream& out, VtkFunction const& fct, PositionTypes type) const
+void VtkWriterInterface<GV,DC>
+  ::writeDataAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const
 {
-  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
-
-  if (type == POINT_DATA) {
-    auto data = dataCollector_.template pointData<T>(fct);
-    return this->writeAppended(out, data);
-  } else {
-    auto data = dataCollector_.template cellData<T>(fct);
-    return this->writeAppended(out, data);
+  for (auto const& v : pointData_) {
+    blocks.push_back( v.type() == Vtk::FLOAT32
+      ? this->writeValuesAppended(out, dataCollector_.template pointData<float>(v))
+      : this->writeValuesAppended(out, dataCollector_.template pointData<double>(v)));
+  }
+  for (auto const& v : cellData_) {
+    blocks.push_back( v.type() == Vtk::FLOAT32
+      ? this->writeValuesAppended(out, dataCollector_.template cellData<float>(v))
+      : this->writeValuesAppended(out, dataCollector_.template cellData<double>(v)));
   }
 }
 
 
 template <class GV, class DC>
-  template <class T>
-std::uint64_t VtkWriterInterface<GV,DC>
-  ::writePointsAppended (std::ofstream& out) const
+void VtkWriterInterface<GV,DC>
+  ::writeAppended (std::ofstream& out, std::vector<pos_type> const& offsets) const
 {
-  assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
+  if (is_a(format_, Vtk::APPENDED)) {
+    out << "<AppendedData encoding=\"raw\">\n_";
+    std::vector<std::uint64_t> blocks;
+    writeGridAppended(out, blocks);
+    writeDataAppended(out, blocks);
+    out << "</AppendedData>\n";
+    pos_type appended_pos = out.tellp();
 
-  auto points = dataCollector_.template points<T>();
-  return this->writeAppended(out, points);
+    pos_type offset = 0;
+    for (std::size_t i = 0; i < offsets.size(); ++i) {
+      out.seekp(offsets[i]);
+      out << '"' << offset << '"';
+      offset += pos_type(blocks[i]);
+    }
+
+    out.seekp(appended_pos);
+  }
 }
 
 
@@ -187,7 +192,7 @@ std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffe
 template <class GV, class DC>
   template <class T>
 std::uint64_t VtkWriterInterface<GV,DC>
-  ::writeAppended (std::ofstream& out, std::vector<T> const& values) const
+  ::writeValuesAppended (std::ofstream& out, std::vector<T> const& values) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
   pos_type begin_pos = out.tellp();

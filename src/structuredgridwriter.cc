@@ -45,30 +45,30 @@ void write(std::string prefix, GridView const& gridView)
 
   {
     using Writer = VtkImageDataWriter<GridView>;
-    Writer vtkWriter(gridView);
+    Writer vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "id_ascii_float32.vti", Vtk::ASCII, Vtk::FLOAT32);
+    vtkWriter.write(prefix + "id_ascii_float32.vti");
   }
 
   {
     using Writer = VtkRectilinearGridWriter<GridView>;
-    Writer vtkWriter(gridView);
+    Writer vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "rg_ascii_float32.vtr", Vtk::ASCII, Vtk::FLOAT32);
+    vtkWriter.write(prefix + "rg_ascii_float32.vtr");
   }
 
   {
     using Writer = VtkStructuredGridWriter<GridView>;
-    Writer vtkWriter(gridView);
+    Writer vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "sg_ascii_float32.vts", Vtk::ASCII, Vtk::FLOAT32);
+    vtkWriter.write(prefix + "sg_ascii_float32.vts");
   }
 
   {
     using Writer = VtkUnstructuredGridWriter<GridView>;
-    Writer vtkWriter(gridView);
+    Writer vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
     vtkWriter.addPointData(fct2, "analytic");
-    vtkWriter.write(prefix + "ug_ascii_float32.vts", Vtk::ASCII, Vtk::FLOAT32);
+    vtkWriter.write(prefix + "ug_ascii_float32.vts");
   }
 }
 

@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
+
 #include <dune/common/std/optional.hh>
 
 #include <dune/vtk/filewriter.hh>
@@ -13,11 +17,17 @@
 
 namespace Dune
 {
+  // forward declaration
+  template <class VtkWriter>
+  class VtkTimeseriesWriter;
+
   /// File-Writer for Vtk .vtu files
   template <class GridView, class DataCollector>
   class VtkWriterInterface
       : public FileWriter
   {
+    template <class> friend class VtkTimeseriesWriter;
+
   protected:
     static constexpr int dimension = GridView::dimension;
 
@@ -31,20 +41,23 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkWriterInterface (GridView const& gridView)
+    VtkWriterInterface (GridView const& gridView,
+                        Vtk::FormatTypes format = Vtk::BINARY,
+                        Vtk::DataTypes datatype = Vtk::FLOAT32)
       : dataCollector_(gridView)
-    {}
-
-    /// Write the attached data to the file
-    virtual void write (std::string const& fn) override
+      , format_(format)
+      , datatype_(datatype)
     {
-      write(fn, Vtk::BINARY);
+#ifndef HAVE_ZLIB
+      if (format_ == Vtk::COMPRESSED) {
+        std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
+        format_ = Vtk::BINARY;
+      }
+#endif
     }
 
-    /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    void write (std::string const& fn,
-                Vtk::FormatTypes format,
-                Vtk::DataTypes datatype = Vtk::FLOAT32);
+    /// Write the attached data to the file
+    virtual void write (std::string const& fn) override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -74,35 +87,35 @@ namespace Dune
     /// Return the file extension of the serial file (not including the dot)
     virtual std::string fileExtension () const = 0;
 
+    /// Write points and cells in raw/compressed format to output stream
+    virtual void writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const = 0;
+
     // Write the point or cell values given by the grid function `fct` to the
     // output stream `out`. In case of binary format, stores the streampos of XML
     // attributes "offset" in the vector `offsets`.
     void writeData (std::ofstream& out,
                     std::vector<pos_type>& offsets,
                     VtkFunction const& fct,
-                    PositionTypes type) const;
+                    PositionTypes type,
+                    Std::optional<std::size_t> timestep = {}) const;
 
-    // Collect point or cell data (depending on \ref PositionTypes) and pass
-    // the resulting vector to \ref writeAppended.
-    template <class T>
-    std::uint64_t writeDataAppended (std::ofstream& out,
-                                     VtkFunction const& fct,
-                                     PositionTypes type) const;
+    // Write points-data and cell-data in raw/compressed format to output stream
+    void writeDataAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const;
 
     // Write the coordinates of the vertices to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
     void writePoints (std::ofstream& out,
-                      std::vector<pos_type>& offsets) const;
+                      std::vector<pos_type>& offsets,
+                      Std::optional<std::size_t> timestep = {}) const;
 
-    // Collect point positions and pass the resulting vector to \ref writeAppended.
-    template <class T>
-    std::uint64_t writePointsAppended (std::ofstream& out) const;
+    // Write Appended section and fillin offset values to XML attributes
+    void writeAppended (std::ofstream& out, std::vector<pos_type> const& offsets) const;
 
     // Write the `values` in blocks (possibly compressed) to the output
     // stream `out`. Return the written block size.
     template <class T>
-    std::uint64_t writeAppended (std::ofstream& out, std::vector<T> const& values) const;
+    std::uint64_t writeValuesAppended (std::ofstream& out, std::vector<T> const& values) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
     std::string getNames (std::vector<VtkFunction> const& data) const;
@@ -112,6 +125,11 @@ namespace Dune
     {
       short i = 1;
       return (reinterpret_cast<char*>(&i)[1] == 1 ? "BigEndian" : "LittleEndian");
+    }
+
+    std::string getFileExtension () const
+    {
+      return fileExtension();
     }
 
   protected:

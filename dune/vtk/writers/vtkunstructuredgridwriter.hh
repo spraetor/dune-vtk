@@ -22,6 +22,8 @@ namespace Dune
   class VtkUnstructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
   {
+    template <class> friend class VtkTimeseriesWriter;
+
     static constexpr int dimension = GridView::dimension;
 
     using Super = VtkWriterInterface<GridView, DataCollector>;
@@ -29,8 +31,10 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkUnstructuredGridWriter (GridView const& gridView)
-      : Super(gridView)
+    VtkUnstructuredGridWriter (GridView const& gridView,
+                               Vtk::FormatTypes format = Vtk::BINARY,
+                               Vtk::DataTypes datatype = Vtk::FLOAT32)
+      : Super(gridView, format, datatype)
     {}
 
   private:
@@ -42,20 +46,37 @@ namespace Dune
     /// for [i] in [0,...,size).
     virtual void writeParallelFile (std::string const& pfilename, int size) const override;
 
+    /// Write a series of timesteps in one file
+    /**
+     * \param filename      The name of the output file
+     * \param filenameMesh  The name of a file where the mesh is stored. Must exist.
+     * \param timesteps     A vector of pairs (timestep, filename) where the filename indicates
+     *                      a file where the data of the timestep is stored.
+     * \param blocks        A list of block sizes of the binary data stored in the files.
+     *                      Order: (points, cells, pointdata[0], celldata[0], pointdata[1], celldata[1],...)
+     **/
+    void writeTimeseriesSerialFile (std::string const& filename,
+                                    std::string const& filenameMesh,
+                                    std::vector<std::pair<double, std::string>> const& timesteps,
+                                    std::vector<std::uint64_t> const& blocks) const;
+
+    /// Write parallel VTK file for series of timesteps
+    void writeTimeseriesParallelFile (std::string const& pfilename, int size,
+                                      std::vector<std::pair<double, std::string>> const& timesteps) const;
+
     virtual std::string fileExtension () const override
     {
       return "vtu";
     }
 
+    virtual void writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const override;
+
     // Write the element connectivity to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
     void writeCells (std::ofstream& oust,
-                     std::vector<pos_type>& offsets) const;
-
-    // Collect element connectivity, offsets and element types, and pass the
-    // resulting vectors to \ref writeAppended.
-    std::array<std::uint64_t,3> writeCellsAppended (std::ofstream& out) const;
+                     std::vector<pos_type>& offsets,
+                     Std::optional<std::size_t> timestep = {}) const;
 
   private:
     using Super::dataCollector_;

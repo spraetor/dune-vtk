@@ -47,6 +47,11 @@ void VtkRectilinearGridWriter<GV,DC>
     out << "<Piece Extent=\"" << join(extent.begin(), extent.end()) << "\">\n";
   });
 
+  // Write point coordinates for x, y, and z ordinate
+  out << "<Coordinates>\n";
+  writeCoordinates(out, offsets);
+  out << "</Coordinates>\n";
+
   // Write data associated with grid points
   out << "<PointData" << this->getNames(pointData_) << ">\n";
   for (auto const& v : pointData_)
@@ -59,53 +64,11 @@ void VtkRectilinearGridWriter<GV,DC>
     this->writeData(out, offsets, v, Super::CELL_DATA);
   out << "</CellData>\n";
 
-  // Write point coordinates for x, y, and z ordinate
-  out << "<Coordinates>\n";
-  writeCoordinates(out, offsets);
-  out << "</Coordinates>\n";
-
   out << "</Piece>\n";
   out << "</RectilinearGrid>\n";
 
-  std::vector<std::uint64_t> blocks; // size of i'th appended block
-  pos_type appended_pos = 0;
-  if (is_a(format_, Vtk::APPENDED)) {
-    out << "<AppendedData encoding=\"raw\">\n_";
-    appended_pos = out.tellp();
-    for (auto const& v : pointData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::POINT_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::POINT_DATA) );
-    }
-    for (auto const& v : cellData_) {
-      if (v.type() == Vtk::FLOAT32)
-        blocks.push_back( this->template writeDataAppended<float>(out, v, Super::CELL_DATA) );
-      else
-        blocks.push_back( this->template writeDataAppended<double>(out, v, Super::CELL_DATA) );
-    }
-
-    if (datatype_ == Vtk::FLOAT32) {
-      auto bs = writeCoordinatesAppended<float>(out);
-      blocks.insert(blocks.end(), bs.begin(), bs.end());
-    } else {
-      auto bs = writeCoordinatesAppended<double>(out);
-      blocks.insert(blocks.end(), bs.begin(), bs.end());
-    }
-    out << "</AppendedData>\n";
-  }
-
+  this->writeAppended(out, offsets);
   out << "</VTKFile>";
-
-  // fillin offset values and block sizes
-  if (is_a(format_, Vtk::APPENDED)) {
-    pos_type offset = 0;
-    for (std::size_t i = 0; i < offsets.size(); ++i) {
-      out.seekp(offsets[i]);
-      out << '"' << offset << '"';
-      offset += pos_type(blocks[i]);
-    }
-  }
 }
 
 
@@ -131,6 +94,13 @@ void VtkRectilinearGridWriter<GV,DC>
       << " WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\""
       << ">\n";
 
+  // Write point coordinates for x, y, and z ordinate
+  out << "<PCoordinates>\n";
+  out << "<PDataArray Name=\"x\" type=\"" << to_string(datatype_) << "\" />\n";
+  out << "<PDataArray Name=\"y\" type=\"" << to_string(datatype_) << "\" />\n";
+  out << "<PDataArray Name=\"z\" type=\"" << to_string(datatype_) << "\" />\n";
+  out << "</PCoordinates>\n";
+
   // Write data associated with grid points
   out << "<PPointData" << this->getNames(pointData_) << ">\n";
   for (auto const& v : pointData_) {
@@ -153,13 +123,6 @@ void VtkRectilinearGridWriter<GV,DC>
   }
   out << "</PCellData>\n";
 
-  // Write point coordinates for x, y, and z ordinate
-  out << "<PCoordinates>\n";
-  out << "<PDataArray Name=\"x\" type=\"" << to_string(datatype_) << "\" />\n";
-  out << "<PDataArray Name=\"y\" type=\"" << to_string(datatype_) << "\" />\n";
-  out << "<PDataArray Name=\"z\" type=\"" << to_string(datatype_) << "\" />\n";
-  out << "</PCoordinates>\n";
-
   // Write piece file references
   dataCollector_.writePieces([&out,pfilename,ext=this->fileExtension()](int p, auto const& extent, bool write_extent)
   {
@@ -177,13 +140,17 @@ void VtkRectilinearGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkRectilinearGridWriter<GV,DC>
-  ::writeCoordinates (std::ofstream& out, std::vector<pos_type>& offsets) const
+  ::writeCoordinates (std::ofstream& out, std::vector<pos_type>& offsets,
+                      Std::optional<std::size_t> timestep) const
 {
   std::string names = "xyz";
   if (format_ == Vtk::ASCII) {
     auto coordinates = dataCollector_.template coordinates<double>();
     for (std::size_t d = 0; d < 3; ++d) {
-      out << "<DataArray type=\"" << to_string(datatype_) << "\" Name=\"" << names[d] << "\" format=\"ascii\">\n";
+      out << "<DataArray type=\"" << to_string(datatype_) << "\" Name=\"" << names[d] << "\" format=\"ascii\"";
+      if (timestep)
+        out << " TimeStep=\"" << *timestep << "\"";
+      out << ">\n";
       std::size_t i = 0;
       for (auto const& c : coordinates[d])
         out << c << (++i % 6 != 0 ? ' ' : '\n');
@@ -193,6 +160,8 @@ void VtkRectilinearGridWriter<GV,DC>
   else { // Vtk::APPENDED format
     for (std::size_t j = 0; j < 3; ++j) {
       out << "<DataArray type=\"" << to_string(datatype_) << "\" Name=\"" << names[j] << "\" format=\"appended\"";
+      if (timestep)
+        out << " TimeStep=\"" << *timestep << "\"";
       out << " offset=";
       offsets.push_back(out.tellp());
       out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
@@ -203,20 +172,23 @@ void VtkRectilinearGridWriter<GV,DC>
 
 
 template <class GV, class DC>
-  template <class T>
-std::array<std::uint64_t,3> VtkRectilinearGridWriter<GV,DC>
-  ::writeCoordinatesAppended (std::ofstream& out) const
+void VtkRectilinearGridWriter<GV,DC>
+  ::writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const
 {
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
-  auto coordinates = dataCollector_.template coordinates<T>();
-
-  // write conncetivity, offsets, and types
-  std::uint64_t bs0 = this->writeAppended(out, coordinates[0]);
-  std::uint64_t bs1 = this->writeAppended(out, coordinates[1]);
-  std::uint64_t bs2 = this->writeAppended(out, coordinates[2]);
-
-  return {bs0, bs1, bs2};
+  // write coordinates along axis
+  if (datatype_ == Vtk::FLOAT32) {
+    auto coordinates = dataCollector_.template coordinates<float>();
+    blocks.push_back(this->writeValuesAppended(out, coordinates[0]));
+    blocks.push_back(this->writeValuesAppended(out, coordinates[1]));
+    blocks.push_back(this->writeValuesAppended(out, coordinates[2]));
+  } else {
+    auto coordinates = dataCollector_.template coordinates<double>();
+    blocks.push_back(this->writeValuesAppended(out, coordinates[0]));
+    blocks.push_back(this->writeValuesAppended(out, coordinates[1]));
+    blocks.push_back(this->writeValuesAppended(out, coordinates[2]));
+  }
 }
 
 } // end namespace Dune

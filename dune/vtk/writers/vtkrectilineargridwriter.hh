@@ -29,8 +29,10 @@ namespace Dune
 
   public:
     /// Constructor, stores the gridView
-    VtkRectilinearGridWriter (GridView const& gridView)
-      : Super(gridView)
+    VtkRectilinearGridWriter (GridView const& gridView,
+                              Vtk::FormatTypes format = Vtk::BINARY,
+                              Vtk::DataTypes datatype = Vtk::FLOAT32)
+      : Super(gridView, format, datatype)
     {}
 
   private:
@@ -42,7 +44,8 @@ namespace Dune
     /// for [i] in [0,...,size).
     virtual void writeParallelFile (std::string const& pfilename, int size) const override;
 
-    void writeCoordinates (std::ofstream& out, std::vector<pos_type>& offsets) const;
+    void writeCoordinates (std::ofstream& out, std::vector<pos_type>& offsets,
+                           Std::optional<std::size_t> timestep = {}) const;
 
     template <class T>
     std::array<std::uint64_t, 3> writeCoordinatesAppended (std::ofstream& out) const;
@@ -51,6 +54,8 @@ namespace Dune
     {
       return "vtr";
     }
+
+    virtual void writeGridAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const override;
 
   private:
     using Super::dataCollector_;
