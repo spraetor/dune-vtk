@@ -15,7 +15,7 @@ evaluation in arbitrary local coordinates.
 
 ```c++
 Grid grid = ...;
-VtkWriter<typename Grid::LeafGridView> vtkWriter(grid.leafGridView());
+VtkWriter<typename Grid::LeafGridView> vtkWriter(grid.leafGridView(), Vtk::ASCII);
 
 auto fct = makeAnalyticGridViewFunction([](auto const& x) {
   return std::sin(x[0]);
@@ -24,7 +24,7 @@ auto fct = makeAnalyticGridViewFunction([](auto const& x) {
 vtkWriter.addPointData(fct, "u_points");
 vtkWriter.addCellData(fct, "u_cells");
 
-vtkWriter.write("filename.vtu", Vtk::ASCII);
+vtkWriter.write("filename.vtu");
 ```
 
 See also the `src/` directory for more examples.
