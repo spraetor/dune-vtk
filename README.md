@@ -82,6 +82,10 @@ A timeseries is a collection of timesteps stored in one file, instead of separat
 
 Timeseries file are create a bit differently from other Vtk file. There, in the first write the grid points and cells are stored in a separate file, and in each timestep just the data is written also to temporary files. When you need the timeseries file, these stored temporaries are collected and combined to one VTK file. Thus, only the minimum amount of data is written in each timestep. The intermediate files are stored, by default, in a `/tmp` folder, with (hopefully) fast write access.
 
+**Limitations:**
+
+- Maximum 1000 timesteps can be written. This is a limitation of VTK.
+
 **TODO:**
 
 - Allow to specify the `/tmp` folder by the user.
