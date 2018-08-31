@@ -136,10 +136,10 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
-  ::writeTimeseriesFile (std::string const& filename,
-                         std::string const& filenameMesh,
-                         std::vector<std::pair<double, std::string>> const& timesteps,
-                         std::vector<std::uint64_t> const& blocks) const
+  ::writeTimeseriesSerialFile (std::string const& filename,
+                               std::string const& filenameMesh,
+                               std::vector<std::pair<double, std::string>> const& timesteps,
+                               std::vector<std::uint64_t> const& blocks) const
 {
   std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
   assert(out.is_open());
@@ -206,15 +206,16 @@ void VtkUnstructuredGridWriter<GV,DC>
   out << "</Piece>\n";
   out << "</UnstructuredGrid>\n";
 
-  pos_type appended_pos = 0;
   out << "<AppendedData encoding=\"raw\">\n_";
-  appended_pos = out.tellp();
+  pos_type appended_pos = out.tellp();
 
-  std::ifstream file_mesh(filenameMesh, std::ios_base::in | std::ios_base::binary);
-  out << file_mesh.rdbuf();
-  file_mesh.close();
-  assert( std::uint64_t(out.tellp()) == std::accumulate(blocks.begin(), std::next(blocks.begin(),shift), std::uint64_t(appended_pos)) );
+  { // write grid (points, cells)
+    std::ifstream file_mesh(filenameMesh, std::ios_base::in | std::ios_base::binary);
+    out << file_mesh.rdbuf();
+    assert( std::uint64_t(out.tellp()) == std::accumulate(blocks.begin(), std::next(blocks.begin(),shift), std::uint64_t(appended_pos)) );
+  }
 
+  // write point-data and cell-data
   for (auto const& timestep : timesteps) {
     std::ifstream file(timestep.second, std::ios_base::in | std::ios_base::binary);
     out << file.rdbuf();
@@ -247,6 +248,78 @@ void VtkUnstructuredGridWriter<GV,DC>
       offset += pos_type(blocks[j++]);
     }
   }
+}
+
+
+template <class GV, class DC>
+void VtkUnstructuredGridWriter<GV,DC>
+  ::writeTimeseriesParallelFile (std::string const& pfilename, int size, std::vector<std::pair<double, std::string>> const& timesteps) const
+{
+  std::string filename = pfilename + ".pvtu";
+  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
+  assert(out.is_open());
+
+  out << "<VTKFile"
+      << " type=\"PUnstructuredGrid\""
+      << " version=\"1.0\""
+      << " byte_order=\"" << this->getEndian() << "\""
+      << " header_type=\"UInt64\""
+      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
+      << ">\n";
+
+  out << "<PUnstructuredGrid GhostLevel=\"0\""
+      << " TimeValues=\"";
+  {
+    std::size_t i = 0;
+    for (auto const& timestep : timesteps)
+      out << timestep.first << (++i % 6 != 0 ? ' ' : '\n');
+  }
+  out << "\">\n";
+
+  // Write points
+  out << "<PPoints>\n";
+  out << "<PDataArray"
+      << " type=\"" << to_string(datatype_) << "\""
+      << " NumberOfComponents=\"3\""
+      << " />\n";
+  out << "</PPoints>\n";
+
+  // Write data associated with grid points
+  out << "<PPointData" << this->getNames(pointData_) << ">\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    for (auto const& v : pointData_) {
+      out << "<PDataArray"
+          << " Name=\"" << v.name() << "\""
+          << " type=\"" << to_string(v.type()) << "\""
+          << " NumberOfComponents=\"" << v.ncomps() << "\""
+          << " TimeStep=\"" << i << "\""
+          << " />\n";
+    }
+  }
+  out << "</PPointData>\n";
+
+  // Write data associated with grid cells
+  out << "<PCellData" << this->getNames(cellData_) << ">\n";
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
+    for (auto const& v : cellData_) {
+      out << "<PDataArray"
+          << " Name=\"" << v.name() << "\""
+          << " type=\"" << to_string(v.type()) << "\""
+          << " NumberOfComponents=\"" << v.ncomps() << "\""
+          << " TimeStep=\"" << i << "\""
+          << " />\n";
+    }
+  }
+  out << "</PCellData>\n";
+
+  // Write piece file references
+  for (int p = 0; p < size; ++p) {
+    std::string piece_source = pfilename + "_p" + std::to_string(p) + "." + this->fileExtension();
+    out << "<Piece Source=\"" << piece_source << "\" />\n";
+  }
+
+  out << "</PUnstructuredGrid>\n";
+  out << "</VTKFile>";
 }
 
 

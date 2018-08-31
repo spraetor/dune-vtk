@@ -47,10 +47,22 @@ namespace Dune
     virtual void writeParallelFile (std::string const& pfilename, int size) const override;
 
     /// Write a series of timesteps in one file
-    void writeTimeseriesFile (std::string const& filename,
-                              std::string const& filenameMesh,
-                              std::vector<std::pair<double, std::string>> const& timesteps,
-                              std::vector<std::uint64_t> const& blocksize) const;
+    /**
+     * \param filename      The name of the output file
+     * \param filenameMesh  The name of a file where the mesh is stored. Must exist.
+     * \param timesteps     A vector of pairs (timestep, filename) where the filename indicates
+     *                      a file where the data of the timestep is stored.
+     * \param blocks        A list of block sizes of the binary data stored in the files.
+     *                      Order: (points, cells, pointdata[0], celldata[0], pointdata[1], celldata[1],...)
+     **/
+    void writeTimeseriesSerialFile (std::string const& filename,
+                                    std::string const& filenameMesh,
+                                    std::vector<std::pair<double, std::string>> const& timesteps,
+                                    std::vector<std::uint64_t> const& blocks) const;
+
+    /// Write parallel VTK file for series of timesteps
+    void writeTimeseriesParallelFile (std::string const& pfilename, int size,
+                                      std::vector<std::pair<double, std::string>> const& timesteps) const;
 
     virtual std::string fileExtension () const override
     {

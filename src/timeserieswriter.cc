@@ -49,7 +49,7 @@ int main (int argc, char** argv)
 
   using GridType = YaspGrid<3>;
   FieldVector<double,3> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<3,int>(4);
+  auto numElements = filledArray<3,int>(8);
   GridType grid(upperRight, numElements);
   write("yasp", grid.leafGridView());
 }

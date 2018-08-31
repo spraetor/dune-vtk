@@ -30,21 +30,21 @@ void VtkWriterInterface<GV,DC>
 
   std::string filename = p.string() + "." + fileExtension();
 
+  int rank = 0;
+  int num_ranks = 1;
+
 #ifdef HAVE_MPI
-  int rank = -1;
-  int num_ranks = -1;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-  if (num_ranks > 1) {
+  if (num_ranks > 1)
     filename = p.string() + "_p" + std::to_string(rank) + "." + fileExtension();
+#endif
 
-    writeSerialFile(filename);
-    if (rank == 0) {
-      writeParallelFile(p.string(), num_ranks);
-    }
-  } else {
-    writeSerialFile(filename);
-  }
+  writeSerialFile(filename);
+
+#ifdef HAVE_MPI
+  if (num_ranks > 1 && rank == 0)
+    writeParallelFile(p.string(), num_ranks);
 #endif
 }
 
