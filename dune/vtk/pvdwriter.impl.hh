@@ -60,7 +60,7 @@ void PvdWriter<W>
   out << "<VTKFile"
       << " type=\"Collection\""
       << " version=\"0.1\""
-      << (format_ != Vtk::ASCII ? " byte_order=\"" << vtkWriter_.getEndian() << "\"" : "")
+      << (format_ != Vtk::ASCII ? " byte_order=\"" + vtkWriter_.getEndian() + "\"" : "")
       << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
       << ">\n";
 
