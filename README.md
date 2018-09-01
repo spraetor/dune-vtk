@@ -84,7 +84,7 @@ Timeseries file are create a bit differently from other Vtk file. There, in the 
 
 **Limitations:**
 
-- Maximum 1000 timesteps can be written. This is a limitation of VTK.
+- Maximum 1000 timesteps can be written. This is a limitation of VTK. (Limitation removed in recent VTK versions)
 
 **TODO:**
 
