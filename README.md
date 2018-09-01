@@ -9,23 +9,30 @@ a file reader is provided to import VTK files into Dune grid and data objects.
 ## Usage
 The VTK writer works similar to the dune-grid `VTKWriter`. It needs to be bound 
 to a GridView and then data can be added to the points or cells in the grid.
-Points are not necessarily grid vertices, but any coordinates places inside the 
+Points are not necessarily grid vertices, but any coordinates placed inside the 
 grid cells, so the data must be provided as GridViewFunction to allow the local
 evaluation in arbitrary local coordinates.
 
+General interface of a VtkWriter
 ```c++
-Grid grid = ...;
-VtkWriter<typename Grid::LeafGridView> vtkWriter(grid.leafGridView(), Vtk::ASCII);
-
-auto fct = makeAnalyticGridViewFunction([](auto const& x) {
-  return std::sin(x[0]);
-});
-
-vtkWriter.addPointData(fct, "u_points");
-vtkWriter.addCellData(fct, "u_cells");
-
-vtkWriter.write("filename.vtu");
+template <class GridView>
+class Vtk[Type]Writer
+{
+public:
+  // Constructor
+  Vtk[Type]Writer(GridView, Vtk::FormatTypes = Vtk::BINARY, Vtk::DataTypes = Vtk::FLOAT32);
+  
+  // Bind data to the writer
+  Vtk[Type]Writer& addPointData(Function [, std::string name, int numComponents, Vtk::FormatTypes]);
+  Vtk[Type]Writer& addCellData(Function [, std::string name, int numComponents, Vtk::FormatTypes]);
+  
+  // Write file with filename
+  void write(std::string filename);
+};
 ```
+where `Function` is either a `GridViewFunction`, i.e. supports `bind()`, `unbind()`, and `localFunction(Function)`, or is a legacy `VTKFunction` from Dune-Grid. The optional parameters `name`, `numComponents` and `format` may be given for a `GridViewFunction`.
+
+The parameter `Vtk::FormatTypes` is one of `Vtk::ASCII`, `Vtk::BINARY`, or `Vtk::COMPRESSED` and `Vtk::DataTypes` is one of `Vtk::FLOAT32`, or `Vtk::FLOAT64`.
 
 See also the `src/` directory for more examples.
 
