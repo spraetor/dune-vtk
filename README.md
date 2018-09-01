@@ -15,7 +15,7 @@ evaluation in arbitrary local coordinates.
 
 General interface of a VtkWriter
 ```c++
-template <class GridView>
+template <class GridView, class DataCollector = DefaultDataCollector<GridView>>
 class Vtk[Type]Writer
 {
 public:
@@ -32,7 +32,7 @@ public:
 ```
 where `Function` is either a `GridViewFunction`, i.e. supports `bind()`, `unbind()`, and `localFunction(Function)`, or is a legacy `VTKFunction` from Dune-Grid. The optional parameters `name`, `numComponents` and `format` may be given for a `GridViewFunction`.
 
-The parameter `Vtk::FormatTypes` is one of `Vtk::ASCII`, `Vtk::BINARY`, or `Vtk::COMPRESSED` and `Vtk::DataTypes` is one of `Vtk::FLOAT32`, or `Vtk::FLOAT64`. The `[Type]` of a VtkWriter is one of `UnstructuredGrid`, `StructuredGrid`, `RectilinearGrid`, `ImageData`, or `Timeseries`, see below for details.
+The parameter `Vtk::FormatTypes` is one of `Vtk::ASCII`, `Vtk::BINARY`, or `Vtk::COMPRESSED` and `Vtk::DataTypes` is one of `Vtk::FLOAT32`, or `Vtk::FLOAT64`. The `[Type]` of a VtkWriter is one of `UnstructuredGrid`, `StructuredGrid`, `RectilinearGrid`, `ImageData`, or `Timeseries`, see below for details. A `DataCollector` may be specified to control how point and cell values are extracted from the `GridView` and the bound data. See `dune/vtk/datacollectors/` of a list of poissible types. The default datacollector extracts a connected grid with continuous data, where points are grid vertices.
 
 See also the `src/` directory for more examples.
 
