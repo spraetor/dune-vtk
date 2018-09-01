@@ -32,7 +32,7 @@ public:
 ```
 where `Function` is either a `GridViewFunction`, i.e. supports `bind()`, `unbind()`, and `localFunction(Function)`, or is a legacy `VTKFunction` from Dune-Grid. The optional parameters `name`, `numComponents` and `format` may be given for a `GridViewFunction`.
 
-The parameter `Vtk::FormatTypes` is one of `Vtk::ASCII`, `Vtk::BINARY`, or `Vtk::COMPRESSED` and `Vtk::DataTypes` is one of `Vtk::FLOAT32`, or `Vtk::FLOAT64`.
+The parameter `Vtk::FormatTypes` is one of `Vtk::ASCII`, `Vtk::BINARY`, or `Vtk::COMPRESSED` and `Vtk::DataTypes` is one of `Vtk::FLOAT32`, or `Vtk::FLOAT64`. The `[Type]` of a VtkWriter is one of `UnstructuredGrid`, `StructuredGrid`, `RectilinearGrid`, `ImageData`, or `Timeseries`, see below for details.
 
 See also the `src/` directory for more examples.
 
