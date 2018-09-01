@@ -36,10 +36,10 @@ using int_ = std::integral_constant<int,dim>;
 template <class GridView>
 void write(std::string prefix, GridView const& gridView)
 {
-  FieldVector<double,GridView::dimension> c;
-  if (GridView::dimension > 0) c[0] = 11.0;
-  if (GridView::dimension > 1) c[1] = 7.0;
-  if (GridView::dimension > 2) c[2] = 3.0;
+  FieldVector<double,GridView::dimensionworld> c;
+  if (GridView::dimensionworld > 0) c[0] = 11.0;
+  if (GridView::dimensionworld > 1) c[1] = 7.0;
+  if (GridView::dimensionworld > 2) c[2] = 3.0;
 
   auto fct2 = makeAnalyticGridViewFunction([&c](auto const& x) -> float { return c.dot(x); }, gridView);
 
@@ -77,7 +77,7 @@ void write_yaspgrid(std::integral_constant<int,dim>)
 {
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(12);
+  auto numElements = filledArray<dim,int>(8);
   GridType grid(upperRight,numElements,0,0);
   grid.globalRefine(1);
 
@@ -90,7 +90,7 @@ void write_spgrid(std::integral_constant<int,dim>)
 #if HAVE_DUNE_SPGRID
   using GridType = SPGrid<double,dim, SPIsotropicRefinement>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,int>(12);
+  auto numElements = filledArray<dim,int>(8);
   GridType grid(SPDomain<double,dim>::unitCube(),numElements);
   // grid.globalRefine(1);
 

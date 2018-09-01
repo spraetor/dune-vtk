@@ -28,7 +28,7 @@ int main(int argc, char** argv)
   using GridType = YaspGrid<dim>;
   FieldVector<double,dim> upperRight; upperRight = 1.0;
   auto numElements = filledArray<dim,int>(8);
-  GridType grid(upperRight,numElements);
+  GridType grid(upperRight,numElements,0,0);
 
   using GridView = typename GridType::LeafGridView;
   GridView gridView = grid.leafGridView();

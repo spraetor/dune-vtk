@@ -31,7 +31,7 @@ int main(int argc, char** argv)
   {
     FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
     FieldVector<double,dim> upperRight; upperRight = 1.0;
-    auto numElements = filledArray<dim,unsigned int>(4);
+    auto numElements = filledArray<dim,unsigned int>(8);
     auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
     auto& grid = *gridPtr;
 

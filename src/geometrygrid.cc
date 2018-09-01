@@ -46,10 +46,10 @@ private:
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-  FieldVector<double,GridView::dimension> c;
-  if (GridView::dimension > 0) c[0] = 11.0;
-  if (GridView::dimension > 1) c[1] = 7.0;
-  if (GridView::dimension > 2) c[2] = 3.0;
+  FieldVector<double,GridView::dimensionworld> c;
+  if (GridView::dimensionworld > 0) c[0] = 11.0;
+  if (GridView::dimensionworld > 1) c[1] = 7.0;
+  if (GridView::dimensionworld > 2) c[2] = 3.0;
 
   auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) { return c.dot(x); }, gridView);
 
@@ -66,7 +66,7 @@ int main (int argc, char** argv)
   using HostGrid = YaspGrid<2>;
   FieldVector<double,2> bbox = {2.0*M_PI, 2.0*M_PI};
   std::array<int,2> num = {4, 12};
-  HostGrid hostGrid{bbox, num}; //, std::bitset<2>{"11"}};
+  HostGrid hostGrid{bbox, num, 0, 0}; //, std::bitset<2>{"11"}};
 
   // grid build up of mapped coordinates
   double R = 1.0, r = 0.25;

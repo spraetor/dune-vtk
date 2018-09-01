@@ -24,14 +24,14 @@ using namespace Dune::Functions;
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-  FieldVector<double,GridView::dimension> c{11.0, 7.0, 3.0};
+  FieldVector<double,GridView::dimensionworld> c{11.0, 7.0, 3.0};
   auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) -> float { return c.dot(x); }, gridView);
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
   VtkTimeseriesWriter<Writer> seriesWriter(gridView, Vtk::BINARY, Vtk::FLOAT32);
   seriesWriter.addPointData(p1Analytic, "q1");
   seriesWriter.addCellData(p1Analytic, "q0");
-  std::string filename = prefix + "_" + std::to_string(GridView::dimension) + "d_binary32.vtu";
+  std::string filename = prefix + "_" + std::to_string(GridView::dimensionworld) + "d_binary32.vtu";
   for (double t = 0.0; t < 5; t += 0.5) {
     seriesWriter.writeTimestep(t, filename);
   }
@@ -50,6 +50,6 @@ int main (int argc, char** argv)
   using GridType = YaspGrid<3>;
   FieldVector<double,3> upperRight; upperRight = 1.0;
   auto numElements = filledArray<3,int>(8);
-  GridType grid(upperRight, numElements);
+  GridType grid(upperRight, numElements, 0, 0);
   write("yasp", grid.leafGridView());
 }

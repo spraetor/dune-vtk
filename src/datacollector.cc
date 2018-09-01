@@ -38,7 +38,7 @@ void write_dc (std::string prefix, GridView const& gridView, Fct1 const& fct1, F
   vtkWriter.addPointData(fct2, "q1");
   vtkWriter.addCellData(fct2, "q0");
 
-  vtkWriter.write(prefix + "_" + std::to_string(GridView::dimension) + "d_ascii.vtu");
+  vtkWriter.write(prefix + "_" + std::to_string(GridView::dimensionworld) + "d_ascii.vtu");
 }
 
 template <class GridView>
@@ -47,10 +47,10 @@ void write (std::string prefix, GridView const& gridView)
   using namespace BasisFactory;
   auto basis = makeBasis(gridView, lagrange<1>());
 
-  FieldVector<double,GridView::dimension> c;
-  if (GridView::dimension > 0) c[0] = 11.0;
-  if (GridView::dimension > 1) c[1] = 7.0;
-  if (GridView::dimension > 2) c[2] = 3.0;
+  FieldVector<double,GridView::dimensionworld> c;
+  if (GridView::dimensionworld > 0) c[0] = 11.0;
+  if (GridView::dimensionworld > 1) c[1] = 7.0;
+  if (GridView::dimensionworld > 2) c[2] = 3.0;
 
   std::vector<double> vec(basis.dimension());
   interpolate(basis, vec, [&c](auto const& x) { return c.dot(x); });
@@ -77,8 +77,8 @@ int main(int argc, char** argv)
   {
     using GridType = YaspGrid<dim.value>;
     FieldVector<double,dim.value> upperRight; upperRight = 1.0;
-    auto numElements = filledArray<dim.value,int>(4);
-    GridType grid(upperRight, numElements);
+    auto numElements = filledArray<dim.value,int>(8);
+    GridType grid(upperRight, numElements, 0, 0);
     write("yasp", grid.leafGridView());
   });
 }
