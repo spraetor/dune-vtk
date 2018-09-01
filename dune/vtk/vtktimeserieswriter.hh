@@ -53,7 +53,7 @@ namespace Dune
     }
 
     /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    void writeTimestep (double time, std::string const& fn);
+    void writeTimestep (double time, std::string const& fn) const;
 
     /// Writes all timesteps to single timeseries file.
     // NOTE: requires an aforging call to \ref writeTimestep
@@ -79,10 +79,10 @@ namespace Dune
     VtkWriter vtkWriter_;
     filesystem::path tmpDir_;
 
-    bool initialized_ = false;
+    mutable bool initialized_ = false;
 
     // block size of attached data
-    std::vector<std::uint64_t> blocks_;
+    mutable std::vector<std::uint64_t> blocks_;
 
     mutable std::string filenameMesh_;
     mutable std::vector<std::pair<double, std::string>> timesteps_;

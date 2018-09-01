@@ -118,6 +118,7 @@ void VtkTimeseriesWriter<W>
     assert(ec == 0);
   }
   timesteps_.clear();
+  initialized_ = false;
 }
 
 } // end namespace Dune

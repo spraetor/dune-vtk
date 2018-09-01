@@ -9,7 +9,7 @@ namespace Dune {
 
 template <class W>
 void PvdWriter<W>
-  ::write (double time, std::string const& fn) const
+  ::writeTimestep (double time, std::string const& fn) const
 {
   auto p = filesystem::path(fn);
   auto name = p.stem();

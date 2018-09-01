@@ -29,7 +29,7 @@ namespace Dune
     }
 
     /// Write the attached data to the file
-    void write (double time, std::string const& fn) const;
+    void writeTimestep (double time, std::string const& fn) const;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
