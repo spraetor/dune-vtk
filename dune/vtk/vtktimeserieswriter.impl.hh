@@ -23,14 +23,29 @@
 namespace Dune {
 
 template <class W>
+VtkTimeseriesWriter<W>::~VtkTimeseriesWriter ()
+{
+  if (initialized_) {
+    int ec = std::remove(filenameMesh_.c_str());
+    assert(ec == 0);
+    for (auto const& timestep : timesteps_) {
+      ec = std::remove(timestep.second.c_str());
+      assert(ec == 0);
+    }
+  }
+  std::remove(tmpDir_.string().c_str());
+}
+
+
+template <class W>
 void VtkTimeseriesWriter<W>
-  ::writeTimestep (double time, std::string const& fn)
+  ::writeTimestep (double time, std::string const& fn, bool writeCollection) const
 {
   auto name = filesystem::path(fn).stem();
   auto tmp = tmpDir_;
   tmp /= name.string();
 
-  vtkWriter_.update();
+  vtkWriter_.dataCollector_.update();
 
   std::string filenameBase = tmp.string();
 
@@ -55,6 +70,9 @@ void VtkTimeseriesWriter<W>
   std::ofstream out(filenameData, std::ios_base::ate | std::ios::binary);
   vtkWriter_.writeDataAppended(out, blocks_);
   timesteps_.emplace_back(time, filenameData);
+
+  if (writeCollection)
+    write(fn);
 }
 
 
@@ -63,7 +81,6 @@ void VtkTimeseriesWriter<W>
   ::write (std::string const& fn) const
 {
   assert( initialized_ );
-  assert( timesteps_.size() < 1000 ); // maximal number of allowed timesteps in timeseries file
 
   auto p = filesystem::path(fn);
   auto name = p.stem();
@@ -109,16 +126,6 @@ void VtkTimeseriesWriter<W>
     vtkWriter_.writeTimeseriesParallelFile(parallel_out, p.string() + "_ts", num_ranks, timesteps_);
   }
 #endif
-
-  // remove all temporary data files
-  int ec = std::remove(filenameMesh_.c_str());
-  assert(ec == 0);
-  for (auto const& timestep : timesteps_) {
-    ec = std::remove(timestep.second.c_str());
-    assert(ec == 0);
-  }
-  timesteps_.clear();
-  initialized_ = false;
 }
 
 } // end namespace Dune

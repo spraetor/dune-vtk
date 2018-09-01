@@ -41,10 +41,12 @@ void write (std::string prefix, GridView const& gridView)
   using Writer = VtkUnstructuredGridWriter<GridView>;
   PvdWriter<Writer> pvdWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
 
+  std::string filename = prefix + "_" + std::to_string(GridView::dimensionworld) + "d_ascii.vtu";
+
   pvdWriter.addPointData(p1Analytic, "p1");
   pvdWriter.addCellData(p1Analytic, "p0");
   for (double t = 0.0; t < 10.0; t += 1.0) {
-    pvdWriter.writeTimestep(t, prefix + "_" + std::to_string(GridView::dimensionworld) + "d_ascii.vtu");
+    pvdWriter.writeTimestep(t, filename);
   }
 }
 

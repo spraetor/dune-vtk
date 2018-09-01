@@ -147,11 +147,6 @@ namespace Dune
       return datatype_;
     }
 
-    void update ()
-    {
-      dataCollector_.update();
-    }
-
   protected:
     mutable DataCollector dataCollector_;
 

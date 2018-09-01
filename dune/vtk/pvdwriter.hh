@@ -6,13 +6,14 @@
 #include <tuple>
 
 #include <dune/vtk/vtktypes.hh>
-// #include <dune/vtk/vtkwriterinterface.hh>
+#include <dune/vtk/filewriter.hh>
 
 namespace Dune
 {
   /// File-Writer for ParaView .pvd files
   template <class VtkWriter>
   class PvdWriter
+      : public FileWriter
   {
     using Self = PvdWriter;
 
@@ -29,7 +30,18 @@ namespace Dune
     }
 
     /// Write the attached data to the file
-    void writeTimestep (double time, std::string const& fn) const;
+    /**
+     * Create timestep files for the data associated to the current timestep `time`.
+     *
+     * \param time  The time value of the written data
+     * \param fn  Filename of the file to write to. Is stored in \ref timesteps_.
+     * \param writeCollection  Create a collection .pvd file directly
+     **/
+    void writeTimestep (double time, std::string const& fn, bool writeCollection = true) const;
+
+    /// Writes collection of timesteps to .pvd file.
+    // NOTE: requires an aforging call to \ref writeTimestep
+    virtual void write (std::string const& fn) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -49,7 +61,7 @@ namespace Dune
 
   protected:
     /// Write a series of vtk files in a .pvd ParaView Data file
-    void writeFile (double time, std::ofstream& out) const;
+    void writeFile (std::ofstream& out) const;
 
   protected:
     VtkWriter vtkWriter_;

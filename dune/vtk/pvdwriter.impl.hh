@@ -9,7 +9,7 @@ namespace Dune {
 
 template <class W>
 void PvdWriter<W>
-  ::writeTimestep (double time, std::string const& fn) const
+  ::writeTimestep (double time, std::string const& fn, bool writeCollection) const
 {
   auto p = filesystem::path(fn);
   auto name = p.stem();
@@ -31,6 +31,36 @@ void PvdWriter<W>
   timesteps_.emplace_back(time, filename + ext);
   vtkWriter_.write(filename + ext);
 
+  if (rank == 0 && writeCollection) {
+    std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
+    assert(out.is_open());
+
+    out.imbue(std::locale::classic());
+    out << std::setprecision(datatype_ == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    writeFile(out);
+  }
+}
+
+
+template <class W>
+void PvdWriter<W>
+  ::write (std::string const& fn) const
+{
+  auto p = filesystem::path(fn);
+  auto name = p.stem();
+  p.remove_filename();
+  p /= name.string();
+
+  int rank = 0;
+  int num_ranks = 1;
+#ifdef HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+#endif
+
   if (rank == 0) {
     std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
     assert(out.is_open());
@@ -40,14 +70,14 @@ void PvdWriter<W>
       ? std::numeric_limits<float>::digits10+2
       : std::numeric_limits<double>::digits10+2);
 
-    writeFile(time, out);
+    writeFile(out);
   }
 }
 
 
 template <class W>
 void PvdWriter<W>
-  ::writeFile (double time, std::ofstream& out) const
+  ::writeFile (std::ofstream& out) const
 {
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile"

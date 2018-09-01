@@ -25,7 +25,8 @@ template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
   FieldVector<double,GridView::dimensionworld> c{11.0, 7.0, 3.0};
-  auto p1Analytic = makeAnalyticGridViewFunction([&c](auto const& x) -> float { return c.dot(x); }, gridView);
+  double shift = 0.0;
+  auto p1Analytic = makeAnalyticGridViewFunction([&c,&shift](auto const& x) -> float { return c.dot(x) + shift; }, gridView);
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
   VtkTimeseriesWriter<Writer> seriesWriter(gridView, Vtk::BINARY, Vtk::FLOAT32);
@@ -33,7 +34,8 @@ void write (std::string prefix, GridView const& gridView)
   seriesWriter.addCellData(p1Analytic, "q0");
   std::string filename = prefix + "_" + std::to_string(GridView::dimensionworld) + "d_binary32.vtu";
   for (double t = 0.0; t < 5; t += 0.5) {
-    seriesWriter.writeTimestep(t, filename);
+    seriesWriter.writeTimestep(t, filename, false);
+    shift += 0.25;
   }
   seriesWriter.write(filename);
 

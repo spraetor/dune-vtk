@@ -47,16 +47,26 @@ namespace Dune
       filesystem::create_directories(tmpDir_);
     }
 
-    ~VtkTimeseriesWriter ()
-    {
-      std::remove(tmpDir_.string().c_str());
-    }
+    /// Remove all written intermediate files and remove temporary directory
+    ~VtkTimeseriesWriter ();
 
-    /// Write the attached data to the file with \ref Vtk::FormatTypes and \ref Vtk::DataTypes
-    void writeTimestep (double time, std::string const& fn) const;
+    /// Write the attached data to the file
+    /**
+     * Create intermediate files for the data associated to the current timestep `time`.
+     *
+     * \param time  The time value of the written data
+     * \param fn  Filename of the file to write to. Only the base part
+     *            (without dir and extentsion) is used to write the intermediate
+     *            file into a tmp directory.
+     * \param writeCollection  Create a timeseries file directly
+     **/
+    void writeTimestep (double time, std::string const& fn, bool writeCollection = true) const;
 
     /// Writes all timesteps to single timeseries file.
     // NOTE: requires an aforging call to \ref writeTimestep
+    /**
+     * Create a timeseries file with all timesteps written by \ref writeTimestep.
+     **/
     virtual void write (std::string const& fn) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
