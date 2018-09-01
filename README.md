@@ -60,7 +60,7 @@ proposed one. A comparions:
 | Quadratic Data     | -             | **x**        |
 | Subdivided Data    | **x**         | -            |
 | Sequence (PVD)     | **x**         | **x**        |
-| Timeseries         | -             | x            |
+| Timeseries         | -             | **x**        |
 
 ## Writers and Readers
 Dune-Vtk provides nearly all file formats specified in VTK + 2 time series formats: PVD and VTK-Timeseries.
