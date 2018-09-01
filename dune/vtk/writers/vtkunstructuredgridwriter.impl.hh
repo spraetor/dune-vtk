@@ -18,18 +18,8 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
-  ::writeSerialFile (std::string const& filename) const
+  ::writeSerialFile (std::ofstream& out) const
 {
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
-  if (format_ == Vtk::ASCII) {
-    if (datatype_ == Vtk::FLOAT32)
-      out << std::setprecision(std::numeric_limits<float>::digits10+2);
-    else
-      out << std::setprecision(std::numeric_limits<double>::digits10+2);
-  }
-
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile"
       << " type=\"UnstructuredGrid\""
@@ -77,12 +67,8 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
-  ::writeParallelFile (std::string const& pfilename, int size) const
+  ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int size) const
 {
-  std::string filename = pfilename + ".pvtu";
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
   out << "<VTKFile"
       << " type=\"PUnstructuredGrid\""
       << " version=\"1.0\""
@@ -136,19 +122,12 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
-  ::writeTimeseriesSerialFile (std::string const& filename,
+  ::writeTimeseriesSerialFile (std::ofstream& out,
                                std::string const& filenameMesh,
                                std::vector<std::pair<double, std::string>> const& timesteps,
                                std::vector<std::uint64_t> const& blocks) const
 {
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
   assert(is_a(format_, Vtk::APPENDED));
-  if (datatype_ == Vtk::FLOAT32)
-    out << std::setprecision(std::numeric_limits<float>::digits10+2);
-  else
-    out << std::setprecision(std::numeric_limits<double>::digits10+2);
 
   std::vector<std::vector<pos_type>> offsets(timesteps.size()); // pos => offset
   out << "<VTKFile"
@@ -253,12 +232,11 @@ void VtkUnstructuredGridWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
-  ::writeTimeseriesParallelFile (std::string const& pfilename, int size, std::vector<std::pair<double, std::string>> const& timesteps) const
+  ::writeTimeseriesParallelFile (std::ofstream& out,
+                                 std::string const& pfilename,
+                                 int size,
+                                 std::vector<std::pair<double, std::string>> const& timesteps) const
 {
-  std::string filename = pfilename + ".pvtu";
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
   out << "<VTKFile"
       << " type=\"PUnstructuredGrid\""
       << " version=\"1.0\""

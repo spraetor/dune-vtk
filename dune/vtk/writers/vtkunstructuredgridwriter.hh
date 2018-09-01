@@ -39,12 +39,12 @@ namespace Dune
 
   private:
     /// Write a serial VTK file in Unstructured format
-    virtual void writeSerialFile (std::string const& filename) const override;
+    virtual void writeSerialFile (std::ofstream& out) const override;
 
     /// Write a parallel VTK file `pfilename.pvtu` in Unstructured format,
     /// with `size` the number of pieces and serial files given by `pfilename_p[i].vtu`
     /// for [i] in [0,...,size).
-    virtual void writeParallelFile (std::string const& pfilename, int size) const override;
+    virtual void writeParallelFile (std::ofstream& out, std::string const& pfilename, int size) const override;
 
     /// Write a series of timesteps in one file
     /**
@@ -55,13 +55,14 @@ namespace Dune
      * \param blocks        A list of block sizes of the binary data stored in the files.
      *                      Order: (points, cells, pointdata[0], celldata[0], pointdata[1], celldata[1],...)
      **/
-    void writeTimeseriesSerialFile (std::string const& filename,
+    void writeTimeseriesSerialFile (std::ofstream& out,
                                     std::string const& filenameMesh,
                                     std::vector<std::pair<double, std::string>> const& timesteps,
                                     std::vector<std::uint64_t> const& blocks) const;
 
     /// Write parallel VTK file for series of timesteps
-    void writeTimeseriesParallelFile (std::string const& pfilename, int size,
+    void writeTimeseriesParallelFile (std::ofstream& out,
+                                      std::string const& pfilename, int size,
                                       std::vector<std::pair<double, std::string>> const& timesteps) const;
 
     virtual std::string fileExtension () const override

@@ -49,7 +49,7 @@ namespace Dune
 
   protected:
     /// Write a series of vtk files in a .pvd ParaView Data file
-    void writeFile (double time, std::string const& filename) const;
+    void writeFile (double time, std::ofstream& out) const;
 
   protected:
     VtkWriter vtkWriter_;

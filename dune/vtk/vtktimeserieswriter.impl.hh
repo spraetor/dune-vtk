@@ -70,7 +70,7 @@ void VtkTimeseriesWriter<W>
   p.remove_filename();
   p /= name.string();
 
-  std::string filenameBase = p.string() + "_ts";
+  std::string filename = p.string() + "_ts";
 
   int rank = 0;
   int num_ranks = 1;
@@ -78,15 +78,36 @@ void VtkTimeseriesWriter<W>
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
     if (num_ranks > 1)
-      filenameBase = p.string() + "_ts_p" + std::to_string(rank);
+      filename = p.string() + "_ts_p" + std::to_string(rank);
 #endif
 
-  std::string filename = filenameBase + "." + vtkWriter_.getFileExtension();
-  vtkWriter_.writeTimeseriesSerialFile(filename, filenameMesh_, timesteps_, blocks_);
+  { // write serial file
+    std::ofstream serial_out(filename + "." + vtkWriter_.getFileExtension(),
+                             std::ios_base::ate | std::ios::binary);
+    assert(serial_out.is_open());
+
+    serial_out.imbue(std::locale::classic());
+    serial_out << std::setprecision(vtkWriter_.getDatatype() == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    vtkWriter_.writeTimeseriesSerialFile(serial_out, filenameMesh_, timesteps_, blocks_);
+  }
 
 #ifdef HAVE_MPI
-  if (num_ranks > 1 && rank == 0)
-    vtkWriter_.writeTimeseriesParallelFile(p.string() + "_ts", num_ranks, timesteps_);
+  if (num_ranks > 1 && rank == 0) {
+    // write parallel file
+    std::ofstream parallel_out(p.string() + "_ts.p" + vtkWriter_.getFileExtension(),
+                               std::ios_base::ate | std::ios::binary);
+    assert(parallel_out.is_open());
+
+    parallel_out.imbue(std::locale::classic());
+    parallel_out << std::setprecision(vtkWriter_.getDatatype() == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    vtkWriter_.writeTimeseriesParallelFile(parallel_out, p.string() + "_ts", num_ranks, timesteps_);
+  }
 #endif
 
   // remove all temporary data files

@@ -28,7 +28,7 @@ void VtkWriterInterface<GV,DC>
   p.remove_filename();
   p /= name.string();
 
-  std::string filename = p.string() + "." + fileExtension();
+  std::string filename = p.string();
 
   int rank = 0;
   int num_ranks = 1;
@@ -37,14 +37,34 @@ void VtkWriterInterface<GV,DC>
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
   if (num_ranks > 1)
-    filename = p.string() + "_p" + std::to_string(rank) + "." + fileExtension();
+    filename = p.string() + "_p" + std::to_string(rank);
 #endif
 
-  writeSerialFile(filename);
+  { // write serial file
+    std::ofstream serial_out(filename + "." + fileExtension(), std::ios_base::ate | std::ios::binary);
+    assert(serial_out.is_open());
+
+    serial_out.imbue(std::locale::classic());
+    serial_out << std::setprecision(datatype_ == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    writeSerialFile(serial_out);
+  }
 
 #ifdef HAVE_MPI
-  if (num_ranks > 1 && rank == 0)
-    writeParallelFile(p.string(), num_ranks);
+  if (num_ranks > 1 && rank == 0) {
+    // write parallel file
+    std::ofstream parallel_out(p.string() + ".p" + fileExtension(), std::ios_base::ate | std::ios::binary);
+    assert(parallel_out.is_open());
+
+    parallel_out.imbue(std::locale::classic());
+    parallel_out << std::setprecision(datatype_ == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    writeParallelFile(parallel_out, p.string(), num_ranks);
+  }
 #endif
 }
 

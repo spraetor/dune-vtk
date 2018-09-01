@@ -80,12 +80,12 @@ namespace Dune
 
   private:
     /// Write a serial VTK file in Unstructured format
-    virtual void writeSerialFile (std::string const& filename) const = 0;
+    virtual void writeSerialFile (std::ofstream& out) const = 0;
 
     /// Write a parallel VTK file `pfilename.pvtu` in Unstructured format,
     /// with `size` the number of pieces and serial files given by `pfilename_p[i].vtu`
     /// for [i] in [0,...,size).
-    virtual void writeParallelFile (std::string const& pfilename, int size) const = 0;
+    virtual void writeParallelFile (std::ofstream& out, std::string const& pfilename, int size) const = 0;
 
     /// Return the file extension of the serial file (not including the dot)
     virtual std::string fileExtension () const = 0;

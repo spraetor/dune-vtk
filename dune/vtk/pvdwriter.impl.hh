@@ -31,23 +31,24 @@ void PvdWriter<W>
   timesteps_.emplace_back(time, filename + ext);
   vtkWriter_.write(filename + ext);
 
-  if (rank == 0)
-    writeFile(time, p.string() + ".pvd");
+  if (rank == 0) {
+    std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
+    assert(out.is_open());
+
+    out.imbue(std::locale::classic());
+    out << std::setprecision(datatype_ == Vtk::FLOAT32
+      ? std::numeric_limits<float>::digits10+2
+      : std::numeric_limits<double>::digits10+2);
+
+    writeFile(time, out);
+  }
 }
 
 
 template <class W>
 void PvdWriter<W>
-  ::writeFile (double time, std::string const& filename) const
+  ::writeFile (double time, std::ofstream& out) const
 {
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
-  if (datatype_ == Vtk::FLOAT32)
-    out << std::setprecision(std::numeric_limits<float>::digits10+2);
-  else
-    out << std::setprecision(std::numeric_limits<double>::digits10+2);
-
   out << "<?xml version=\"1.0\"?>\n";
   out << "<VTKFile"
       << " type=\"Collection\""

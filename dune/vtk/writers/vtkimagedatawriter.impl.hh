@@ -18,18 +18,8 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkImageDataWriter<GV,DC>
-  ::writeSerialFile (std::string const& filename) const
+  ::writeSerialFile (std::ofstream& out) const
 {
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
-  if (format_ == Vtk::ASCII) {
-    if (datatype_ == Vtk::FLOAT32)
-      out << std::setprecision(std::numeric_limits<float>::digits10+2);
-    else
-      out << std::setprecision(std::numeric_limits<double>::digits10+2);
-  }
-
   std::vector<pos_type> offsets; // pos => offset
   out << "<VTKFile"
       << " type=\"ImageData\""
@@ -74,12 +64,8 @@ void VtkImageDataWriter<GV,DC>
 
 template <class GV, class DC>
 void VtkImageDataWriter<GV,DC>
-  ::writeParallelFile (std::string const& pfilename, int /*size*/) const
+  ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int /*size*/) const
 {
-  std::string filename = pfilename + ".p" + this->fileExtension();
-  std::ofstream out(filename, std::ios_base::ate | std::ios::binary);
-  assert(out.is_open());
-
   out << "<VTKFile"
       << " type=\"PImageData\""
       << " version=\"1.0\""
