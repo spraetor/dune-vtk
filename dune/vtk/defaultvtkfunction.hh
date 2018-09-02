@@ -4,6 +4,13 @@
 
 namespace Dune
 {
+  template <class T, int N>
+  class FieldVector;
+
+  template <class T, int N, int M>
+  class FieldMatrix;
+
+
   /// Type erasure for dune-functions LocalFunction interface
   template <class GridView, class LocalFunction>
   class LocalFunctionWrapper final
@@ -16,9 +23,6 @@ namespace Dune
 
     template <class F, class D>
     using Range = std::decay_t<decltype(std::declval<F>()(std::declval<D>()))>;
-
-    template <class F, class D>
-    using VectorValued = decltype(std::declval<Range<F,D>>()[0u]);
 
   public:
     template <class LocalFct, disableCopyMove<Self, LocalFct> = 0>
@@ -38,22 +42,32 @@ namespace Dune
 
     virtual double evaluate (int comp, LocalCoordinate const& xi) const override
     {
-      return evaluateImpl(comp, xi, Std::is_detected<VectorValued,LocalFunction,LocalCoordinate>{});
+      return evaluateImpl(comp, localFct_(xi));
     }
 
   private:
     // Evaluate a component of a vector valued data
-    double evaluateImpl (int comp, LocalCoordinate const& xi, std::true_type) const
+    template <class T, int N, int M>
+    double evaluateImpl (int comp, FieldMatrix<T,N,M> const& mat) const
     {
-      auto y = localFct_(xi);
-      return comp < y.size() ? y[comp] : 0.0;
+      int r = comp / 3;
+      int c = comp % 3;
+      return r < N && c < M ? mat[r][c] : 0.0;
+    }
+
+    // Evaluate a component of a vector valued data
+    template <class T, int N>
+    double evaluateImpl (int comp, FieldVector<T,N> const& vec) const
+    {
+      return comp < N ? vec[comp] : 0.0;
     }
 
     // Return the scalar values
-    double evaluateImpl (int comp, LocalCoordinate const& xi, std::false_type) const
+    template <class T>
+    double evaluateImpl (int comp, T const& value) const
     {
       assert(comp == 0);
-      return localFct_(xi);
+      return value;
     }
 
   private:

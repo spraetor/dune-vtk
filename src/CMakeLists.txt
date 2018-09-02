@@ -35,6 +35,10 @@ if (dune-functions_FOUND)
   add_executable("pvdwriter" pvdwriter.cc)
   target_link_dune_default_libraries("pvdwriter")
   target_link_libraries("pvdwriter" dunevtk)
+
+  add_executable("vectorwriter" vectorwriter.cc)
+  target_link_dune_default_libraries("vectorwriter")
+  target_link_libraries("vectorwriter" dunevtk)
 endif ()
 
 if (dune-polygongrid_FOUND)

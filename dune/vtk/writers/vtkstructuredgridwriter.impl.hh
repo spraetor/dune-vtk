@@ -21,13 +21,7 @@ void VtkStructuredGridWriter<GV,DC>
   ::writeSerialFile (std::ofstream& out) const
 {
   std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile"
-      << " type=\"StructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "StructuredGrid");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   out << "<StructuredGrid WholeExtent=\"" << join(wholeExtent.begin(), wholeExtent.end()) << "\">\n";
@@ -65,13 +59,7 @@ template <class GV, class DC>
 void VtkStructuredGridWriter<GV,DC>
   ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int /*size*/) const
 {
-  out << "<VTKFile"
-      << " type=\"PStructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "PStructuredGrid");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   out << "<PStructuredGrid"
@@ -131,13 +119,9 @@ void VtkStructuredGridWriter<GV,DC>
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
   // write points
-  if (datatype_ == Vtk::FLOAT32) {
-    auto points = dataCollector_.template points<float>();
-    blocks.push_back(this->writeValuesAppended(out, points));
-  } else {
-    auto points = dataCollector_.template points<double>();
-    blocks.push_back(this->writeValuesAppended(out, points));
-  }
+  blocks.push_back( datatype_ == Vtk::FLOAT32
+    ? this->writeValuesAppended(out, dataCollector_.template points<float>())
+    : this->writeValuesAppended(out, dataCollector_.template points<double>()) );
 }
 
 } // end namespace Dune

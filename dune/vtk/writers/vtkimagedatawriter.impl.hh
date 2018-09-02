@@ -21,13 +21,7 @@ void VtkImageDataWriter<GV,DC>
   ::writeSerialFile (std::ofstream& out) const
 {
   std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile"
-      << " type=\"ImageData\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "ImageData");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   auto const& origin = dataCollector_.origin();
@@ -66,13 +60,7 @@ template <class GV, class DC>
 void VtkImageDataWriter<GV,DC>
   ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int /*size*/) const
 {
-  out << "<VTKFile"
-      << " type=\"PImageData\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "PImageData");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   auto const& origin = dataCollector_.origin();

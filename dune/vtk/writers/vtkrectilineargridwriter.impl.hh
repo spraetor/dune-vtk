@@ -21,13 +21,7 @@ void VtkRectilinearGridWriter<GV,DC>
   ::writeSerialFile (std::ofstream& out) const
 {
   std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile"
-      << " type=\"RectilinearGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "RectilinearGrid");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   out << "<RectilinearGrid"
@@ -67,13 +61,7 @@ template <class GV, class DC>
 void VtkRectilinearGridWriter<GV,DC>
   ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int /*size*/) const
 {
-  out << "<VTKFile"
-      << " type=\"PRectilinearGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
+  this->writeHeader(out, "PRectilinearGrid");
 
   auto const& wholeExtent = dataCollector_.wholeExtent();
   out << "<PRectilinearGrid"
@@ -138,10 +126,8 @@ void VtkRectilinearGridWriter<GV,DC>
       if (timestep)
         out << " TimeStep=\"" << *timestep << "\"";
       out << ">\n";
-      std::size_t i = 0;
-      for (auto const& c : coordinates[d])
-        out << c << (++i % 6 != 0 ? ' ' : '\n');
-      out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+      this->writeValuesAscii(out, coordinates[d]);
+      out << "</DataArray>\n";
     }
   }
   else { // Vtk::APPENDED format

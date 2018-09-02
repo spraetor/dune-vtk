@@ -5,10 +5,6 @@
 #include <string>
 #include <vector>
 
-#ifdef HAVE_ZLIB
-#include <zlib.h>
-#endif
-
 #include <dune/common/std/optional.hh>
 #include <dune/vtk/filewriter.hh>
 #include <dune/vtk/vtkfunction.hh>
@@ -120,6 +116,11 @@ namespace Dune
     // stream `out`. Return the written block size.
     template <class T>
     std::uint64_t writeValuesAppended (std::ofstream& out, std::vector<T> const& values) const;
+
+    template <class T>
+    void writeValuesAscii (std::ofstream& out, std::vector<T> const& values) const;
+
+    void writeHeader (std::ofstream& out, std::string const& type) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
     std::string getNames (std::vector<VtkFunction> const& data) const;

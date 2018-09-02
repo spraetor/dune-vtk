@@ -2,6 +2,7 @@
 
 #include <type_traits>
 
+#include <dune/common/std/optional.hh>
 #include <dune/common/std/type_traits.hh>
 
 #include "vtklocalfunction.hh"
@@ -9,17 +10,41 @@
 
 namespace Dune
 {
+  template <class T, int N>
+  class FieldVector;
+
+  template <class T, int N, int M>
+  class FieldMatrix;
+
+  namespace Impl
+  {
+    template <class T, class = void>
+    struct SizeImpl
+        : std::integral_constant<int, 1> {};
+
+    template <class T, int N>
+    struct SizeImpl<FieldVector<T,N>>
+        : std::integral_constant<int, N> {};
+
+    template <class T, int N, int M>
+    struct SizeImpl<FieldMatrix<T,N,M>>
+        : std::integral_constant<int, N*M> {};
+  }
+
+  template <class T>
+  constexpr int Size = Impl::SizeImpl<std::decay_t<T>>::value;
+
+
   template <class GridView>
   class VtkFunction
   {
     template <class F>
     using HasLocalFunction = decltype(localFunction(std::declval<F>()));
 
-    template <class F>
-    using Domain = typename std::decay_t<F>::EntitySet::GlobalCoordinate;
+    using Domain = typename GridView::template Codim<0>::Entity::Geometry::LocalCoordinate;
 
     template <class F>
-    using Range = std::decay_t<decltype(std::declval<F>()(std::declval<Domain<F>>()))>;
+    using Range = std::decay_t<decltype(std::declval<F>()(std::declval<Domain>()))>;
 
   public:
     /// Constructor VtkFunction from legacy VTKFunction
@@ -32,25 +57,18 @@ namespace Dune
 
     /// Construct VtkFunction from dune-functions GridFunction with Signature
     template <class F,
-      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
-      std::enable_if_t<Std::is_detected<Range,F>::value,int> = 0>
-    VtkFunction (F&& fct, std::string name, int ncomps = 1, Vtk::DataTypes type = Vtk::Map::type<Range<F>>)
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0>
+    VtkFunction (F&& fct, std::string name,
+                 Std::optional<int> ncomps = {},
+                 Std::optional<Vtk::DataTypes> type = {})
       : localFct_(localFunction(std::forward<F>(fct)))
       , name_(std::move(name))
-      , ncomps_(ncomps)
-      , type_(type)
-    {}
+    {
+      using R = Range<decltype(localFunction(std::forward<F>(fct)))>;
 
-    /// Construct VtkFunction from dune-functions GridFunction without Signature
-    template <class F,
-      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0,
-      std::enable_if_t<not Std::is_detected<Range,F>::value,int> = 0>
-    VtkFunction (F const& fct, std::string name, int ncomps = 1, Vtk::DataTypes type = Vtk::FLOAT32)
-      : localFct_(localFunction(std::forward<F>(fct)))
-      , name_(std::move(name))
-      , ncomps_(ncomps)
-      , type_(type)
-    {}
+      ncomps_ = ncomps ? *ncomps : Size<R>;
+      type_ = type ? *type : Vtk::Map::type<R>;
+    }
 
     VtkFunction () = default;
 
@@ -69,7 +87,7 @@ namespace Dune
     /// Return the number of components of the Range
     int ncomps () const
     {
-      return ncomps_;
+      return ncomps_ > 3 ? 9 : ncomps_ > 1 ? 3 : 1; // tensor, vector, scalar
     }
 
     /// Return the VTK Datatype associated with the functions range type

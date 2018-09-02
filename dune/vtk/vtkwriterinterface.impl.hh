@@ -8,6 +8,10 @@
 #include <sstream>
 #include <string>
 
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
+
 #include <dune/geometry/referenceelements.hh>
 #include <dune/geometry/type.hh>
 
@@ -82,17 +86,11 @@ void VtkWriterInterface<GV,DC>
 
   if (format_ == Vtk::ASCII) {
     out << ">\n";
-    std::size_t i = 0;
-    if (type == POINT_DATA) {
-      auto data = dataCollector_.template pointData<double>(fct);
-      for (auto const& v : data)
-        out << v << (++i % 6 != 0 ? ' ' : '\n');
-    } else {
-      auto data = dataCollector_.template cellData<double>(fct);
-      for (auto const& v : data)
-        out << v << (++i % 6 != 0 ? ' ' : '\n');
-    }
-    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+    if (type == POINT_DATA)
+      writeValuesAscii(out, dataCollector_.template pointData<double>(fct));
+    else
+      writeValuesAscii(out, dataCollector_.template cellData<double>(fct));
+    out << "</DataArray>\n";
   } else {
     out << " offset=";
     offsets.push_back(out.tellp());
@@ -114,11 +112,8 @@ void VtkWriterInterface<GV,DC>
 
   if (format_ == Vtk::ASCII) {
     out << ">\n";
-    auto points = dataCollector_.template points<double>();
-    std::size_t i = 0;
-    for (auto const& v : points)
-      out << v << (++i % 6 != 0 ? ' ' : '\n');
-    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+    writeValuesAscii(out, dataCollector_.template points<double>());
+    out << "</DataArray>\n";
   } else {
     out << " offset=";
     offsets.push_back(out.tellp());
@@ -165,6 +160,46 @@ void VtkWriterInterface<GV,DC>
 
     out.seekp(appended_pos);
   }
+}
+
+
+namespace Impl {
+
+  template <class T, std::enable_if_t<(sizeof(T)>1), int> = 0>
+  T const& printable (T const& t) { return t; }
+
+  std::int16_t printable (std::int8_t c) { return std::int16_t(c); }
+  std::uint16_t printable (std::uint8_t c) { return std::uint16_t(c); }
+
+} // end namespace Impl
+
+
+template <class GV, class DC>
+  template <class T>
+void VtkWriterInterface<GV,DC>
+  ::writeValuesAscii (std::ofstream& out, std::vector<T> const& values) const
+{
+  assert(is_a(format_, Vtk::ASCII) && "Function should by called only in ascii mode!\n");
+  std::size_t i = 0;
+  for (auto const& v : values)
+    out << Impl::printable(v) << (++i % 6 != 0 ? ' ' : '\n');
+  if (i % 6 != 0)
+    out << '\n';
+}
+
+template <class GV, class DC>
+void VtkWriterInterface<GV,DC>
+  ::writeHeader (std::ofstream& out, std::string const& type) const
+{
+  out << "<VTKFile"
+      << " type=\"" << type << "\""
+      << " version=\"1.0\""
+      << " header_type=\"UInt64\"";
+  if (format_ != Vtk::ASCII)
+    out << " byte_order=\"" << getEndian() << "\"";
+  if (format_ == Vtk::COMPRESSED)
+    out << " compressor=\"vtkZLibDataCompressor\"";
+  out << ">\n";
 }
 
 

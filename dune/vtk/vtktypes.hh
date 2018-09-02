@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include <dune/common/ftraits.hh>
 #include <dune/geometry/type.hh>
 
 namespace Dune
@@ -79,7 +80,7 @@ namespace Dune
       static constexpr DataTypes typeImpl (Type<long double>) { return FLOAT64; }
 
       template <class T>
-      static constexpr DataTypes type = typeImpl(Type<T>{});
+      static constexpr DataTypes type = typeImpl(Type<typename FieldTraits<T>::field_type>{});
     };
 
 

@@ -21,15 +21,9 @@ void VtkUnstructuredGridWriter<GV,DC>
   ::writeSerialFile (std::ofstream& out) const
 {
   std::vector<pos_type> offsets; // pos => offset
-  out << "<VTKFile"
-      << " type=\"UnstructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
-
+  this->writeHeader(out, "UnstructuredGrid");
   out << "<UnstructuredGrid>\n";
+
   out << "<Piece"
       << " NumberOfPoints=\"" << dataCollector_.numPoints() << "\""
       << " NumberOfCells=\"" << dataCollector_.numCells() << "\""
@@ -69,14 +63,7 @@ template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
   ::writeParallelFile (std::ofstream& out, std::string const& pfilename, int size) const
 {
-  out << "<VTKFile"
-      << " type=\"PUnstructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
-
+  this->writeHeader(out, "PUnstructuredGrid");
   out << "<PUnstructuredGrid GhostLevel=\"0\">\n";
 
   // Write points
@@ -130,14 +117,7 @@ void VtkUnstructuredGridWriter<GV,DC>
   assert(is_a(format_, Vtk::APPENDED));
 
   std::vector<std::vector<pos_type>> offsets(timesteps.size()); // pos => offset
-  out << "<VTKFile"
-      << " type=\"UnstructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
-
+  this->writeHeader(out, "UnstructuredGrid");
   out << "<UnstructuredGrid"
       << " TimeValues=\"";
   {
@@ -237,14 +217,7 @@ void VtkUnstructuredGridWriter<GV,DC>
                                  int size,
                                  std::vector<std::pair<double, std::string>> const& timesteps) const
 {
-  out << "<VTKFile"
-      << " type=\"PUnstructuredGrid\""
-      << " version=\"1.0\""
-      << " byte_order=\"" << this->getEndian() << "\""
-      << " header_type=\"UInt64\""
-      << (format_ == Vtk::COMPRESSED ? " compressor=\"vtkZLibDataCompressor\"" : "")
-      << ">\n";
-
+  this->writeHeader(out, "PUnstructuredGrid");
   out << "<PUnstructuredGrid GhostLevel=\"0\""
       << " TimeValues=\"";
   {
@@ -312,28 +285,22 @@ void VtkUnstructuredGridWriter<GV,DC>
     if (timestep)
       out << " TimeStep=\"" << *timestep << "\"";
     out << ">\n";
-    std::size_t i = 0;
-    for (auto const& c : cells.connectivity)
-      out << c << (++i % 6 != 0 ? ' ' : '\n');
-    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+    this->writeValuesAscii(out, cells.connectivity);
+    out << "</DataArray>\n";
 
     out << "<DataArray type=\"Int64\" Name=\"offsets\" format=\"ascii\"";
     if (timestep)
       out << " TimeStep=\"" << *timestep << "\"";
     out << ">\n";
-    i = 0;
-    for (auto const& o : cells.offsets)
-      out << o << (++i % 6 != 0 ? ' ' : '\n');
-    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+    this->writeValuesAscii(out, cells.offsets);
+    out << "</DataArray>\n";
 
     out << "<DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\"";
     if (timestep)
       out << " TimeStep=\"" << *timestep << "\"";
     out << ">\n";
-    i = 0;
-    for (auto const& t : cells.types)
-      out << int(t) << (++i % 6 != 0 ? ' ' : '\n');
-    out << (i % 6 != 0 ? "\n" : "") << "</DataArray>\n";
+    this->writeValuesAscii(out, cells.types);
+    out << "</DataArray>\n";
   }
   else { // Vtk::APPENDED format
     out << "<DataArray type=\"Int64\" Name=\"connectivity\" format=\"appended\"";
@@ -370,13 +337,9 @@ void VtkUnstructuredGridWriter<GV,DC>
   assert(is_a(format_, Vtk::APPENDED) && "Function should by called only in appended mode!\n");
 
   // write points
-  if (datatype_ == Vtk::FLOAT32) {
-    auto points = dataCollector_.template points<float>();
-    blocks.push_back(this->writeValuesAppended(out, points));
-  } else {
-    auto points = dataCollector_.template points<double>();
-    blocks.push_back(this->writeValuesAppended(out, points));
-  }
+  blocks.push_back( datatype_ == Vtk::FLOAT32
+    ? this->writeValuesAppended(out, dataCollector_.template points<float>())
+    : this->writeValuesAppended(out, dataCollector_.template points<double>()) );
 
   // write conncetivity, offsets, and types
   auto cells = dataCollector_.cells();
