@@ -12,7 +12,6 @@
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/filledarray.hh>
 #include <dune/common/timer.hh>
-#include <dune/common/test/testsuite.hh>
 
 #include <dune/grid/uggrid.hh>
 #include <dune/grid/yaspgrid.hh>
@@ -76,12 +75,10 @@ int main (int argc, char** argv)
 {
   Dune::MPIHelper::instance(argc, argv);
 
-  TestSuite test{};
-
 #ifdef HAVE_UG
   // Test VtkWriter for UGGrid
   std::cout << "UGGrid\n";
-  Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [&test](auto dim)
+  Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [](auto dim)
   {
     using GridType = UGGrid<dim.value>;
     FieldVector<double,dim.value> lowerLeft; lowerLeft = 0.0;
@@ -109,5 +106,4 @@ int main (int argc, char** argv)
     writer_new(grid.leafGridView());
   });
 
-  return test.exit();
 }

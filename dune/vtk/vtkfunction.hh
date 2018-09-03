@@ -32,7 +32,7 @@ namespace Dune
   }
 
   template <class T>
-  constexpr int Size = Impl::SizeImpl<std::decay_t<T>>::value;
+  constexpr int sizeOf () { return Impl::SizeImpl<std::decay_t<T>>::value; }
 
 
   template <class GridView>
@@ -66,8 +66,8 @@ namespace Dune
     {
       using R = Range<decltype(localFunction(std::forward<F>(fct)))>;
 
-      ncomps_ = ncomps ? *ncomps : Size<R>;
-      type_ = type ? *type : Vtk::Map::type<R>;
+      ncomps_ = ncomps ? *ncomps : sizeOf<R>();
+      type_ = type ? *type : Vtk::Map::type<R>();
     }
 
     VtkFunction () = default;

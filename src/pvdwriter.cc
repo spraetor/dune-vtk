@@ -11,13 +11,8 @@
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/filledarray.hh>
-
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangebasis.hh>
 #include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
-
 #include <dune/grid/yaspgrid.hh>
-
 #include <dune/vtk/pvdwriter.hh>
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
@@ -27,9 +22,6 @@ using namespace Dune::Functions;
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-  using namespace BasisFactory;
-  auto basis = makeBasis(gridView, lagrange<1>());
-
   FieldVector<double,GridView::dimensionworld> c;
   if (GridView::dimensionworld > 0) c[0] = 11.0;
   if (GridView::dimensionworld > 1) c[1] = 7.0;
