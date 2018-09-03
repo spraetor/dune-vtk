@@ -27,11 +27,11 @@ namespace Dune
 
     template <class W>
     using HasWriteTimeseriesSerialFile = decltype(&W::writeTimeseriesSerialFile);
-    static_assert(Std::is_detected<HasWriteTimeseriesSerialFile, VtkWriter>::value, "");
+    // static_assert(Std::is_detected<HasWriteTimeseriesSerialFile, VtkWriter>::value, "");
 
     template <class W>
     using HasWriteTimeseriesParallelFile = decltype(&W::writeTimeseriesParallelFile);
-    static_assert(Std::is_detected<HasWriteTimeseriesParallelFile, VtkWriter>::value, "");
+    // static_assert(Std::is_detected<HasWriteTimeseriesParallelFile, VtkWriter>::value, "");
 
   public:
     /// Constructor, stores the gridView
