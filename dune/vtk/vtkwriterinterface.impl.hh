@@ -289,8 +289,8 @@ std::uint64_t VtkWriterInterface<GV,DC>
 
   pos_type end_pos = out.tellp();
   if (format_ == Vtk::COMPRESSED) {
-    out.seekp(begin_pos + std::int64_t(3*sizeof(std::uint64_t)));
-    out.write((char*)cbs.data(), num_blocks*sizeof(std::uint64_t));
+    out.seekp(begin_pos + std::streamoff(3*sizeof(std::uint64_t)));
+    out.write((char*)cbs.data(), std::streamsize(num_blocks*sizeof(std::uint64_t)));
     out.seekp(end_pos);
   }
 
