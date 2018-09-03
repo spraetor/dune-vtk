@@ -53,7 +53,7 @@ proposed one. A comparions:
 | APPENDED_RAW       | **x**         | **x**        |
 | APPENDED_BASE64    | **x**         | -            |
 | BASE64_COMPRESSED  | -             | -            |
-| APPEDED_COMPRESSED | -             | **x**        |
+| APPENDED_COMPRESSED| -             | **x**        |
 | Parallel files     | **x**         | **x**        |
 | Conforming Data    | **x**         | **x**        |
 | NonConforming Data | **x**         | **x**        |
