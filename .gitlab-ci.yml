@@ -2,13 +2,13 @@
 dune:2.6--gcc:
   image: registry.dune-project.org/docker/ci/dune:2.6-debian-10-gcc-7-14
   script:
-  - dunecontrol --current --opts=/duneci/toolchain all
+  - dunecontrol --current --opts=/duneci/toolchains/gcc-7-14 all
   - cmake --build build-cmake --target build_tests
   - cmake --build build-cmake --target test
   
 dune:2.6--clang:
   image:  registry.dune-project.org/docker/ci/dune:2.6-debian-10-clang-6-libcpp-17
   script:
-  - dunecontrol --current --opts=/duneci/toolchain all
+  - dunecontrol --current --opts=/duneci/toolchains/clang-6-libcpp-17 all
   - cmake --build build-cmake --target build_tests
   - cmake --build build-cmake --target test
