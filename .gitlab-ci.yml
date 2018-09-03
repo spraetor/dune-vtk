@@ -1,13 +1,13 @@
 ---
 dune:2.6--gcc:
-  image: duneci/dune:2.6
+  image: registry.dune-project.org/docker/ci/dune:2.6
   script:
   - dunecontrol --current --opts=/duneci/opts.gcc all
   - cmake --build build-cmake --target build_tests
   - cmake --build build-cmake --target test
   
 dune:2.6--clang:
-  image: duneci/dune:2.6
+  image: registry.dune-project.org/docker/ci/dune:2.6
   script:
   - dunecontrol --current --opts=/duneci/opts.clang all
   - cmake --build build-cmake --target build_tests
