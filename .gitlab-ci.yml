@@ -1,7 +1,28 @@
 ---
-dune:git--gcc:
-  image: mathiwr/dune:latest
+dune:2.5--gcc:
+  image: duneci/dune:2.5
   script:
-  - dunecontrol --current all
-  - dunecontrol --current make build_tests
-  - dunecontrol --current make test
+  - dunecontrol --current --opts=/duneci/opts.gcc all
+  - cmake --build build-cmake --target build_tests
+  - cmake --build build-cmake --target test
+  
+dune:2.5--clang:
+  image: duneci/dune:2.5
+  script:
+  - dunecontrol --current --opts=/duneci/opts.clang all
+  - cmake --build build-cmake --target build_tests
+  - cmake --build build-cmake --target test
+
+dune:2.6--gcc:
+  image: duneci/dune:2.6
+  script:
+  - dunecontrol --current --opts=/duneci/opts.gcc all
+  - cmake --build build-cmake --target build_tests
+  - cmake --build build-cmake --target test
+  
+dune:2.6--clang:
+  image: duneci/dune:2.6
+  script:
+  - dunecontrol --current --opts=/duneci/opts.clang all
+  - cmake --build build-cmake --target build_tests
+  - cmake --build build-cmake --target test
