@@ -12,15 +12,10 @@
 #include <dune/common/exceptions.hh> // We use exceptions
 #include <dune/common/filledarray.hh>
 
-#include <dune/functions/functionspacebases/defaultglobalbasis.hh>
-#include <dune/functions/functionspacebases/lagrangebasis.hh>
-#include <dune/functions/functionspacebases/interpolate.hh>
-#include <dune/functions/gridfunctions/analyticgridviewfunction.hh>
-#include <dune/functions/gridfunctions/discreteglobalbasisfunction.hh>
-
 #include <dune/polygongrid/grid.hh>
 #include <dune/polygongrid/gridfactory.hh>
 
+#include <dune/vtk/legacyvtkfunction.hh>
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
@@ -59,7 +54,7 @@ int main(int argc, char** argv)
   using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView, Vtk::ASCII);
 
-  std::vector<double> p1function(gridView.size(dim), 1.0);
+  std::vector<double> p1function(gridView.size(GridView::dimension), 1.0);
   using P1Function = P1VTKFunction<GridView,std::vector<double>>;
   std::shared_ptr<VTKFunction<GridView> const> p1FctWrapped(new P1Function(gridView, p1function, "p1"));
 
@@ -67,8 +62,8 @@ int main(int argc, char** argv)
   using P0Function = P0VTKFunction<GridView,std::vector<double>>;
   std::shared_ptr<VTKFunction<GridView> const> p0FctWrapped(new P0Function(gridView, p0function, "p0"));
 
-  vtkWriter.addPointData(p1FctWrapped, "p1");
-  vtkWriter.addCellData(p0FctWrapped, "p0");
+  vtkWriter.addPointData(p1FctWrapped);
+  vtkWriter.addCellData(p0FctWrapped);
 
   vtkWriter.write("poly_ascii_float32.vtu");
 }
