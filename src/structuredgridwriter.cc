@@ -81,7 +81,7 @@ void write_yaspgrid(std::integral_constant<int,dim>)
   GridType grid(upperRight,numElements,0,0);
   grid.globalRefine(1);
 
-  write("yasp_" + std::to_string(dim) + "d_", grid.leafGridView());
+  write("structuredgridwriter_yasp_" + std::to_string(dim) + "d_", grid.leafGridView());
 }
 
 template <int dim>
@@ -94,7 +94,7 @@ void write_spgrid(std::integral_constant<int,dim>)
   GridType grid(SPDomain<double,dim>::unitCube(),numElements);
   // grid.globalRefine(1);
 
-  write("sp_" + std::to_string(dim) + "d_", grid.leafGridView());
+  write("structuredgridwriter_sp_" + std::to_string(dim) + "d_", grid.leafGridView());
 #endif
 }
 

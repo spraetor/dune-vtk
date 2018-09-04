@@ -40,5 +40,5 @@ int main(int argc, char** argv)
   using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView, Vtk::ASCII);
   vtkWriter.addPointData(p1FctWrapped);
-  vtkWriter.write("test_ascii_float32.vtu");
+  vtkWriter.write("legacyvtkwriter_ascii_float32.vtu");
 }

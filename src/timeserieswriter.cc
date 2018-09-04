@@ -53,5 +53,5 @@ int main (int argc, char** argv)
   FieldVector<double,3> upperRight; upperRight = 1.0;
   auto numElements = filledArray<3,int>(8);
   GridType grid(upperRight, numElements, 0, 0);
-  write("yasp", grid.leafGridView());
+  write("timeserieswriter_yasp", grid.leafGridView());
 }

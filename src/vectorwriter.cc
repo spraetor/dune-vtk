@@ -72,6 +72,6 @@ int main (int argc, char** argv)
     FieldVector<double,dim.value> upperRight; upperRight = 1.0;
     auto numElements = filledArray<dim.value,int>(8);
     GridType grid(upperRight, numElements, 0, 0);
-    write("yasp_vec", grid.leafGridView());
+    write("vectorwriter_yasp", grid.leafGridView());
   });
 }

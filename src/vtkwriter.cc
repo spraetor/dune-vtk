@@ -83,7 +83,7 @@ int main (int argc, char** argv)
       auto numElements = filledArray<dim.value,unsigned int>(8);
       auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
 
-      write("ug", gridPtr->leafGridView());
+      write("vtkwriter_ug", gridPtr->leafGridView());
     }
   });
 #endif
@@ -95,6 +95,6 @@ int main (int argc, char** argv)
     FieldVector<double,dim.value> upperRight; upperRight = 1.0;
     auto numElements = filledArray<dim.value,int>(8);
     GridType grid(upperRight, numElements, 0, 0);
-    write("yasp", grid.leafGridView());
+    write("vtkwriter_yasp", grid.leafGridView());
   });
 }

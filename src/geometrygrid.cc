@@ -74,5 +74,5 @@ int main (int argc, char** argv)
   using Grid = GeometryGrid<HostGrid,TorusMapper>;
   Grid grid{hostGrid, mapper};
 
-  write("torus", grid.leafGridView());
+  write("geometrygrid_torus", grid.leafGridView());
 }

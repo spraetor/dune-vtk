@@ -1,50 +1,47 @@
+dune_add_test(SOURCES vtkreader.cc
+  LINK_LIBRARIES dunevtk)
 
-add_executable("vtkreader" vtkreader.cc)
-target_link_dune_default_libraries("vtkreader")
-target_link_libraries("vtkreader" dunevtk)
+dune_add_test(SOURCES legacyvtkwriter.cc
+  LINK_LIBRARIES dunevtk)
 
-add_executable("legacyvtkwriter" legacyvtkwriter.cc)
-target_link_dune_default_libraries("legacyvtkwriter")
-target_link_libraries("legacyvtkwriter" dunevtk)
 
-if (dune-functions_FOUND)
-  add_executable("vtkwriter" vtkwriter.cc)
-  target_link_dune_default_libraries("vtkwriter")
-  target_link_libraries("vtkwriter" dunevtk)
+dune_add_test(SOURCES vtkwriter.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("benchmark" benchmark.cc)
-  target_link_dune_default_libraries("benchmark")
-  target_link_libraries("benchmark" dunevtk)
+dune_add_test(SOURCES benchmark.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("datacollector" datacollector.cc)
-  target_link_dune_default_libraries("datacollector")
-  target_link_libraries("datacollector" dunevtk)
+dune_add_test(SOURCES datacollector.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("structuredgridwriter" structuredgridwriter.cc)
-  target_link_dune_default_libraries("structuredgridwriter")
-  target_link_libraries("structuredgridwriter" dunevtk)
+dune_add_test(SOURCES structuredgridwriter.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("geometrygrid" geometrygrid.cc)
-  target_link_dune_default_libraries("geometrygrid")
-  target_link_libraries("geometrygrid" dunevtk)
+dune_add_test(SOURCES geometrygrid.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("timeserieswriter" timeserieswriter.cc)
-  target_link_dune_default_libraries("timeserieswriter")
-  target_link_libraries("timeserieswriter" dunevtk)
+dune_add_test(SOURCES timeserieswriter.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("pvdwriter" pvdwriter.cc)
-  target_link_dune_default_libraries("pvdwriter")
-  target_link_libraries("pvdwriter" dunevtk)
+dune_add_test(SOURCES pvdwriter.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
 
-  add_executable("vectorwriter" vectorwriter.cc)
-  target_link_dune_default_libraries("vectorwriter")
-  target_link_libraries("vectorwriter" dunevtk)
-endif ()
+dune_add_test(SOURCES vectorwriter.cc
+  LINK_LIBRARIES dunevtk
+  CMAKE_GUARD dune-functions_FOUND)
+
 
 if (dune-polygongrid_FOUND)
-  add_executable("polygongrid" polygongrid.cc)
-  target_link_dune_default_libraries("polygongrid")
-  target_link_libraries("polygongrid" dunevtk dunepolygongrid)
+  # CMAKE_GUARD can not be used, since a dummy target is created and linked against dunepolygongrid
+  dune_add_test(SOURCES polygongrid.cc
+    LINK_LIBRARIES dunevtk dunepolygongrid)
 endif ()
 
 add_subdirectory(test)

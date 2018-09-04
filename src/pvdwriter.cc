@@ -54,5 +54,5 @@ int main (int argc, char** argv)
   FieldVector<double,2> upperRight; upperRight = 1.0;
   auto numElements = filledArray<2,int>(8);
   GridType grid(upperRight, numElements, 0, 0);
-  write("yasp", grid.leafGridView());
+  write("pvdwriter_yasp", grid.leafGridView());
 }
