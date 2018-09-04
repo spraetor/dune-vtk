@@ -58,12 +58,17 @@ int main(int argc, char** argv)
 
   using Writer = VtkUnstructuredGridWriter<GridView>;
   Writer vtkWriter(gridView, Vtk::ASCII);
-  auto p1Analytic = makeAnalyticGridViewFunction([](auto const& x) {
-    return std::sin(10*x[0])*std::cos(10*x[1]);
-  }, gridView);
 
-  vtkWriter.addPointData(p1Analytic, "p1");
-  vtkWriter.addCellData(p1Analytic, "p0");
+  std::vector<double> p1function(gridView.size(dim), 1.0);
+  using P1Function = P1VTKFunction<GridView,std::vector<double>>;
+  std::shared_ptr<VTKFunction<GridView> const> p1FctWrapped(new P1Function(gridView, p1function, "p1"));
+
+  std::vector<double> p0function(gridView.size(0), 1.0);
+  using P0Function = P0VTKFunction<GridView,std::vector<double>>;
+  std::shared_ptr<VTKFunction<GridView> const> p0FctWrapped(new P0Function(gridView, p0function, "p0"));
+
+  vtkWriter.addPointData(p1FctWrapped, "p1");
+  vtkWriter.addCellData(p0FctWrapped, "p0");
 
   vtkWriter.write("poly_ascii_float32.vtu");
 }
