@@ -73,8 +73,8 @@ protected:
   using Super::gridView_;
   std::array<int, 6> wholeExtent_;
   std::array<int, 6> extent_;
-  FieldVector<ctype,3> spacing_;
   FieldVector<ctype,3> origin_;
+  FieldVector<ctype,3> spacing_;
   std::vector<std::size_t> indexMap_;
 };
 

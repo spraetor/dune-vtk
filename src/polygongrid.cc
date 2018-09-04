@@ -19,7 +19,6 @@
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
-using namespace Dune::Functions;
 
 using GridType = Dune::PolygonGrid<double>;
 
