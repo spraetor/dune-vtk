@@ -21,7 +21,7 @@
 #include <dune/polygongrid/grid.hh>
 #include <dune/polygongrid/gridfactory.hh>
 
-#include <dune/vtk/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
 using namespace Dune::Functions;
