@@ -71,7 +71,7 @@ void writer_test (GridView const& gridView)
 {
   for (auto const& test_case : test_cases) {
     VtkUnstructuredGridWriter<GridView> vtkWriter(gridView, std::get<1>(test_case), std::get<2>(test_case));
-    vtkWriter.write("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu");
+    vtkWriter.write("mixed_element_test_" + std::get<0>(test_case) + ".vtu");
   }
 }
 
@@ -79,12 +79,12 @@ template <class Grid, class Test>
 void reader_test (Test& test)
 {
   for (auto const& test_case : test_cases) {
-    auto grid = VtkReader<Grid>::read("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu");
+    auto grid = VtkReader<Grid>::read("mixed_element_test_" + std::get<0>(test_case) + ".vtu");
     VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
       std::get<1>(test_case), std::get<2>(test_case));
-    vtkWriter.write("/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
-    test.check(compare_files("/tmp/reader_writer_test_" + std::get<0>(test_case) + ".vtu",
-                             "/tmp/reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"), std::get<0>(test_case));
+    vtkWriter.write("mixed_element_test_" + std::get<0>(test_case) + "_2.vtu");
+    test.check(compare_files("mixed_element_test_" + std::get<0>(test_case) + ".vtu",
+                             "mixed_element_test_" + std::get<0>(test_case) + "_2.vtu"), std::get<0>(test_case));
   }
 }
 

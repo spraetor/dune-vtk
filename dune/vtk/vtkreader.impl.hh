@@ -22,6 +22,7 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
     DUNE_THROW(IOError, "File " << filename << " does not exist!");
 
   std::ifstream input(filename, std::ios_base::in | std::ios_base::binary);
+  assert(input.is_open());
 
   std::string compressor = "";
   std::string data_name = "", data_format = "";
