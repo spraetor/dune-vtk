@@ -7,5 +7,5 @@ Module: dune-vtk
 Version: 0.1
 Maintainer: simon.praetorius@tu-dresden.de
 #depending on
-Depends: dune-grid (>= 2.6)
-Suggests: dune-functions (>= 2.6) dune-spgrid dune-polygongrid
+Depends: dune-common (>= 2.6) dune-geometry (>= 2.6) dune-grid
+Suggests: dune-functions dune-spgrid dune-polygongrid

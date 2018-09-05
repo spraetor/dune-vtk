@@ -10,6 +10,7 @@
 
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/exceptions.hh> // We use exceptions
+#include <dune/common/version.hh>
 
 #include <dune/functions/functionspacebases/defaultglobalbasis.hh>
 #include <dune/functions/functionspacebases/lagrangebasis.hh>
@@ -37,7 +38,11 @@ static TestCases test_cases = {
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
+#if ! DUNE_VERSION_NEWER(DUNE_FUNCTIONS, 2, 6)
+  using namespace BasisBuilder;
+#else
   using namespace BasisFactory;
+#endif
   auto basis = makeBasis(gridView, lagrange<1>());
 
   FieldVector<double,GridView::dimensionworld> c;
