@@ -49,7 +49,7 @@ namespace Dune
       , format_(format)
       , datatype_(datatype)
     {
-#if !HAVE_ZLIB
+#if !HAVE_VTK_ZLIB
       if (format_ == Vtk::COMPRESSED) {
         std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
         format_ = Vtk::BINARY;
