@@ -38,7 +38,7 @@ static TestCases test_cases = {
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-#if ! DUNE_VERSION_NEWER(DUNE_FUNCTIONS, 2, 6)
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS, 2, 7)
   using namespace BasisBuilder;
 #else
   using namespace BasisFactory;
@@ -77,7 +77,7 @@ int main (int argc, char** argv)
 {
   Dune::MPIHelper::instance(argc, argv);
 
-#ifdef HAVE_UG
+#if HAVE_UG
   // Test VtkWriter for UGGrid
   Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [](auto dim)
   {
@@ -87,7 +87,7 @@ int main (int argc, char** argv)
       FieldVector<double,dim.value> upperRight; upperRight = 1.0;
       auto numElements = filledArray<dim.value,unsigned int>(8);
       auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
-
+      gridPtr->loadBalance();
       write("vtkwriter_ug", gridPtr->leafGridView());
     }
   });
