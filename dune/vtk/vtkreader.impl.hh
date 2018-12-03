@@ -3,11 +3,7 @@
 #include <iterator>
 #include <string>
 
-<<<<<<< 0d5e1c63fbeb492af8b00cdfbddbcd516e2805af
-#ifdef HAVE_VTK_ZLIB
-=======
 #if HAVE_VTK_ZLIB
->>>>>>> parallel vtk reader partially implemented
 #include <zlib.h>
 #endif
 
