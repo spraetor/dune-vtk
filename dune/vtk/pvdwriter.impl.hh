@@ -9,30 +9,32 @@ namespace Dune {
 
 template <class W>
 void PvdWriter<W>
-  ::writeTimestep (double time, std::string const& fn, bool writeCollection) const
+  ::writeTimestep (double time, std::string const& fn, Std::optional<std::string> dir, bool writeCollection) const
 {
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();
-  p /= name.string();
+
+  filesystem::path fn_dir = p;
+  filesystem::path data_dir = dir ? filesystem::path(*dir) : fn_dir;
+  filesystem::path rel_dir = filesystem::relative(data_dir, fn_dir);
+
+  std::string pvd_fn = fn_dir.string() + '/' + name.string();
+  std::string seq_fn = data_dir.string() + '/' + name.string() + "_t" + std::to_string(timesteps_.size());
+  std::string rel_fn = rel_dir.string() + '/' + name.string() + "_t" + std::to_string(timesteps_.size());
 
   std::string ext = "." + vtkWriter_.getFileExtension();
-  std::string filename = p.string() + "_t" + std::to_string(timesteps_.size());
 
-  int rank = 0;
-  int num_ranks = 1;
-#ifdef HAVE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-  if (num_ranks > 1)
+  int rank = vtkWriter_.rank_;
+  int numRanks = vtkWriter_.numRanks_;
+  if (numRanks > 1)
     ext = ".p" + vtkWriter_.getFileExtension();
-#endif
 
-  timesteps_.emplace_back(time, filename + ext);
-  vtkWriter_.write(filename + ext);
+  timesteps_.emplace_back(time, rel_fn + ext);
+  vtkWriter_.write(seq_fn + ext);
 
   if (rank == 0 && writeCollection) {
-    std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
+    std::ofstream out(pvd_fn + ".pvd", std::ios_base::ate | std::ios::binary);
     assert(out.is_open());
 
     out.imbue(std::locale::classic());
@@ -47,20 +49,14 @@ void PvdWriter<W>
 
 template <class W>
 void PvdWriter<W>
-  ::write (std::string const& fn) const
+  ::write (std::string const& fn, Std::optional<std::string> /*dir*/) const
 {
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();
   p /= name.string();
 
-  int rank = 0;
-  int num_ranks = 1;
-#ifdef HAVE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-#endif
-
+  int rank = vtkWriter_.rank_;
   if (rank == 0) {
     std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
     assert(out.is_open());

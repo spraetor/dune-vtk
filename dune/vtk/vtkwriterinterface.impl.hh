@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-#ifdef HAVE_ZLIB
+#if HAVE_ZLIB
 #include <zlib.h>
 #endif
 
@@ -23,29 +23,27 @@ namespace Dune {
 
 template <class GV, class DC>
 void VtkWriterInterface<GV,DC>
-  ::write (std::string const& fn) const
+  ::write (std::string const& fn, Std::optional<std::string> dir) const
 {
   dataCollector_.update();
 
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();
-  p /= name.string();
 
-  std::string filename = p.string();
+  filesystem::path fn_dir = p;
+  filesystem::path data_dir = dir ? filesystem::path(*dir) : fn_dir;
+  filesystem::path rel_dir = filesystem::relative(data_dir, fn_dir);
 
-  int rank = 0;
-  int num_ranks = 1;
+  std::string serial_fn = fn_dir.string() + '/' + name.string();
+  std::string parallel_fn = data_dir.string() + '/' + name.string();
+  std::string rel_fn = rel_dir.string() + '/' + name.string();
 
-#ifdef HAVE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-  if (num_ranks > 1)
-    filename = p.string() + "_p" + std::to_string(rank);
-#endif
+  if (numRanks_ > 1)
+    serial_fn += "_p" + std::to_string(rank_);
 
   { // write serial file
-    std::ofstream serial_out(filename + "." + fileExtension(), std::ios_base::ate | std::ios::binary);
+    std::ofstream serial_out(serial_fn + "." + fileExtension(), std::ios_base::ate | std::ios::binary);
     assert(serial_out.is_open());
 
     serial_out.imbue(std::locale::classic());
@@ -56,10 +54,9 @@ void VtkWriterInterface<GV,DC>
     writeSerialFile(serial_out);
   }
 
-#ifdef HAVE_MPI
-  if (num_ranks > 1 && rank == 0) {
+  if (numRanks_ > 1 && rank_ == 0) {
     // write parallel file
-    std::ofstream parallel_out(p.string() + ".p" + fileExtension(), std::ios_base::ate | std::ios::binary);
+    std::ofstream parallel_out(parallel_fn + ".p" + fileExtension(), std::ios_base::ate | std::ios::binary);
     assert(parallel_out.is_open());
 
     parallel_out.imbue(std::locale::classic());
@@ -67,9 +64,8 @@ void VtkWriterInterface<GV,DC>
       ? std::numeric_limits<float>::digits10+2
       : std::numeric_limits<double>::digits10+2);
 
-    writeParallelFile(parallel_out, p.string(), num_ranks);
+    writeParallelFile(parallel_out, rel_fn, numRanks_);
   }
-#endif
 }
 
 
@@ -220,7 +216,7 @@ template <class OStream>
 std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffer_out,
                                std::uint64_t bs, std::uint64_t cbs, int level, OStream& outb)
 {
-#ifdef HAVE_ZLIB
+#if HAVE_ZLIB
   uLongf uncompressed_space = uLongf(bs);
   uLongf compressed_space = uLongf(cbs);
 

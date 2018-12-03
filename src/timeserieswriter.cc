@@ -34,7 +34,7 @@ void write (std::string prefix, GridView const& gridView)
   seriesWriter.addCellData(p1Analytic, "q0");
   std::string filename = prefix + "_" + std::to_string(GridView::dimensionworld) + "d_binary32.vtu";
   for (double t = 0.0; t < 5; t += 0.5) {
-    seriesWriter.writeTimestep(t, filename, false);
+    seriesWriter.writeTimestep(t, filename, {}, false);
     shift += 0.25;
   }
   seriesWriter.write(filename);

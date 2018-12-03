@@ -44,10 +44,12 @@ namespace Dune
                         Vtk::FormatTypes format = Vtk::BINARY,
                         Vtk::DataTypes datatype = Vtk::FLOAT32)
       : dataCollector_(gridView)
+      , rank_(gridView.comm().rank())
+      , numRanks_(gridView.comm().size())
       , format_(format)
       , datatype_(datatype)
     {
-#ifndef HAVE_ZLIB
+#if !HAVE_ZLIB
       if (format_ == Vtk::COMPRESSED) {
         std::cout << "Dune is compiled without compression. Falling back to BINARY VTK output!\n";
         format_ = Vtk::BINARY;
@@ -56,7 +58,11 @@ namespace Dune
     }
 
     /// Write the attached data to the file
-    virtual void write (std::string const& fn) const override;
+    /**
+     * \param fn   Filename of the VTK file. May contain a directory and any file extension.
+     * \param dir  The optional parameter specifies the directory of the partition files.
+     **/
+    virtual void write (std::string const& fn, Std::optional<std::string> dir = {}) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
@@ -150,6 +156,10 @@ namespace Dune
 
   protected:
     mutable DataCollector dataCollector_;
+
+    // the rank and size of the gridView collective communication
+    int rank_ = 0;
+    int numRanks_ = 1;
 
     Vtk::FormatTypes format_;
     Vtk::DataTypes datatype_;

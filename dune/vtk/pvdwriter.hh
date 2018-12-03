@@ -34,14 +34,23 @@ namespace Dune
      * Create timestep files for the data associated to the current timestep `time`.
      *
      * \param time  The time value of the written data
-     * \param fn  Filename of the file to write to. Is stored in \ref timesteps_.
+     * \param fn    Filename of the PVD file to write to. The base part is used to
+     *              create filenames for the timestep files that are stored in \ref timesteps_.
+     *              May contain directory and any filename extension.
+     * \param dir   Specifies where to write the timestep files.
      * \param writeCollection  Create a collection .pvd file directly
      **/
-    void writeTimestep (double time, std::string const& fn, bool writeCollection = true) const;
+    void writeTimestep (double time, std::string const& fn, Std::optional<std::string> dir = {},
+                        bool writeCollection = true) const;
 
     /// Writes collection of timesteps to .pvd file.
     // NOTE: requires an aforging call to \ref writeTimestep
-    virtual void write (std::string const& fn) const override;
+    /**
+     * \param fn  The filename of the PVD file. May contain directory and any filename extension.
+     * \param dir (Ignored) Timestep files are already written and their filenames are
+     *            stored in \ref timesteps_.
+     **/
+    virtual void write (std::string const& fn, Std::optional<std::string> dir = {}) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>
