@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 
-#if HAVE_ZLIB
+#if HAVE_VTK_ZLIB
 #include <zlib.h>
 #endif
 

@@ -41,7 +41,7 @@
 #define DUNE_VTK_VERSION_REVISION @DUNE_VTK_VERSION_REVISION@
 
 /* Define if you have the ZLIB library.  */
-#cmakedefine HAVE_ZLIB ENABLE_ZLIB
+#cmakedefine HAVE_VTK_ZLIB ENABLE_VTK_ZLIB
 
 /* end dune-vtk
    Everything below here will be overwritten

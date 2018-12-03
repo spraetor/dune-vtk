@@ -3,7 +3,7 @@
 #include <iterator>
 #include <string>
 
-#ifdef HAVE_ZLIB
+#ifdef HAVE_VTK_ZLIB
 #include <zlib.h>
 #endif
 
@@ -361,7 +361,7 @@ template <class T, class IStream>
 void read_compressed (T* buffer, unsigned char* buffer_in,
                       std::uint64_t bs, std::uint64_t cbs, IStream& input)
 {
-#ifdef HAVE_ZLIB
+#ifdef HAVE_VTK_ZLIB
   uLongf uncompressed_space = uLongf(bs);
   uLongf compressed_space = uLongf(cbs);
 

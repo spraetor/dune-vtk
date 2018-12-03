@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-#if HAVE_ZLIB
+#if HAVE_VTK_ZLIB
 #include <zlib.h>
 #endif
 
@@ -216,7 +216,7 @@ template <class OStream>
 std::uint64_t writeCompressed (unsigned char const* buffer, unsigned char* buffer_out,
                                std::uint64_t bs, std::uint64_t cbs, int level, OStream& outb)
 {
-#if HAVE_ZLIB
+#if HAVE_VTK_ZLIB
   uLongf uncompressed_space = uLongf(bs);
   uLongf compressed_space = uLongf(cbs);
 
