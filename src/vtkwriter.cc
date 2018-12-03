@@ -87,10 +87,14 @@ int main (int argc, char** argv)
       FieldVector<double,dim.value> upperRight; upperRight = 1.0;
       auto numElements = filledArray<dim.value,unsigned int>(8);
       auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
-
+      gridPtr->loadBalance();
       write("vtkwriter_ug", gridPtr->leafGridView());
     }
   });
+#endif
+
+#ifdef HAVE_DUNE_ALUGRID
+
 #endif
 
   // Test VtkWriter for YaspGrid

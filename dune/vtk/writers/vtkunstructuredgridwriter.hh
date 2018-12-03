@@ -75,9 +75,13 @@ namespace Dune
     // Write the element connectivity to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
-    void writeCells (std::ofstream& oust,
+    void writeCells (std::ofstream& out,
                      std::vector<pos_type>& offsets,
                      Std::optional<std::size_t> timestep = {}) const;
+
+    void writePointIds (std::ofstream& out,
+                        std::vector<pos_type>& offsets,
+                        Std::optional<std::size_t> timestep = {}) const;
 
   private:
     using Super::dataCollector_;

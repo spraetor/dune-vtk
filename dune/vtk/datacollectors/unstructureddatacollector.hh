@@ -37,6 +37,18 @@ public:
     return this->asDerived().cellsImpl();
   }
 
+  std::vector<std::uint64_t> pointIds () const
+  {
+    return this->asDerived().pointIdsImpl();
+  }
+
+protected:
+  // default implementation
+  std::vector<std::uint64_t> pointIdsImpl () const
+  {
+    return {};
+  }
+
 protected:
   using Super::gridView_;
 };

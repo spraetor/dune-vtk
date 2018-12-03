@@ -3,11 +3,16 @@
 #include <iterator>
 #include <string>
 
+<<<<<<< 0d5e1c63fbeb492af8b00cdfbddbcd516e2805af
 #ifdef HAVE_VTK_ZLIB
+=======
+#if HAVE_VTK_ZLIB
+>>>>>>> parallel vtk reader partially implemented
 #include <zlib.h>
 #endif
 
 #include <dune/common/classname.hh>
+#include <dune/common/version.hh>
 
 #include "utility/filesystem.hh"
 #include "utility/string.hh"
@@ -15,7 +20,23 @@
 namespace Dune {
 
 template <class Grid, class Creator>
-void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
+VtkReader<Grid,Creator>::VtkReader (GridFactory<Grid>& factory)
+  : factory_(&factory)
+{
+#if DUNE_VERSION_LT(DUNE_GRID,2,7)
+  #if HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
+  MPI_Comm_size(MPI_COMM_WORLD, &numRanks_);
+  #endif
+#else
+  rank_ = factory.comm().rank();
+  numRanks_ = factory.comm().size();
+#endif
+}
+
+
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::readFromFile (std::string const& filename, bool create)
 {
   // check whether file exists!
   if (!filesystem::exists(filename))
@@ -24,6 +45,20 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
   std::ifstream input(filename, std::ios_base::in | std::ios_base::binary);
   assert(input.is_open());
 
+  std::string ext = filesystem::path(filename).extension().string();
+  if (ext == ".vtu") {
+    readSerialFileFromStream(input, create);
+  } else if (ext == ".pvtu") {
+    readParallelFileFromStream(input, rank_, numRanks_, create);
+  } else {
+    DUNE_THROW(IOError, "File has unknown file-extension '" << ext << "'. Allowed are only '.vtu' and '.pvtu'.");
+  }
+}
+
+
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::readSerialFileFromStream (std::ifstream& input, bool create)
+{
   std::string compressor = "";
   std::string data_name = "", data_format = "";
   Vtk::DataTypes data_type = Vtk::UNKNOWN;
@@ -50,9 +85,6 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
         compressor = attr["compressor"];
         assert(compressor == "vtkZLibDataCompressor"); // only ZLib compression supported
       }
-
-      // std::cout << "<VTKFile type='" << attr["type"] << "' version='" << attr["version"] << "' header_type='" << attr["header_type"] << "' byte_order='" << attr["byte_order"] << "' compressor='" << attr["compressor"] << "'>\n";
-
       section = VTK_FILE;
     }
     else if (isSection(line, "/VTKFile", section, VTK_FILE))
@@ -121,8 +153,6 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
       // Store attributes of DataArray
       dataArray_[data_name] = {data_type, data_components, data_offset};
 
-      // std::cout << "<DataArray type='" << attr["type"] << "' Name='" << data_name << "' NumberOfComponents='" << attr["NumberOfComponents"] << "' format='" << data_format << "' offset='" << attr["offset"] << "' " << (closed ? "/" : "") << ">\n";
-
       // Skip section in appended mode
       if (data_format == "appended") {
         if (!closed) {
@@ -187,7 +217,7 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
         }
         break;
       case POINTS_DATA_ARRAY:
-        section = readPoints(input);
+        section = readPoints(input, data_name);
         break;
       case CD_DATA_ARRAY:
         if (data_type == Vtk::FLOAT32) {
@@ -213,7 +243,62 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename)
   if (section != NO_SECTION)
     DUNE_THROW(IOError, "VTK-File is incomplete. It must end with </VTKFile>!");
 
-  createGrid();
+  if (create)
+    createGrid();
+}
+
+
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::readParallelFileFromStream (std::ifstream& input, int commRank, int commSize, bool create)
+{
+  pieces_.clear();
+
+  Sections section = NO_SECTION;
+  for (std::string line; std::getline(input, line); ) {
+    ltrim(line);
+
+    if (isSection(line, "VTKFile", section)) {
+      bool closed = false;
+      auto attr = parseXml(line, closed);
+
+      if (!attr["type"].empty())
+        assert(attr["type"] == "PUnstructuredGrid");
+      if (!attr["version"].empty())
+        assert(std::stod(attr["version"]) == 1.0);
+      if (!attr["byte_order"].empty())
+        assert(attr["byte_order"] == "LittleEndian");
+      if (!attr["header_type"].empty())
+        assert(attr["header_type"] == "UInt64");
+      if (!attr["compressor"].empty())
+        assert(attr["compressor"] == "vtkZLibDataCompressor"); // only ZLib compression supported
+      section = VTK_FILE;
+    }
+    else if (isSection(line, "/VTKFile", section, VTK_FILE))
+      section = NO_SECTION;
+    else if (isSection(line, "PUnstructuredGrid", section, VTK_FILE))
+      section = UNSTRUCTURED_GRID;
+    else if (isSection(line, "/PUnstructuredGrid", section, UNSTRUCTURED_GRID))
+      section = VTK_FILE;
+    else if (isSection(line, "Piece", section, UNSTRUCTURED_GRID)) {
+      bool closed = false;
+      auto attr = parseXml(line, closed);
+
+      assert(attr.count("Source") > 0);
+      pieces_.push_back(attr["Source"]);
+    }
+
+    if (section == NO_SECTION)
+      break;
+  }
+
+  if (section != NO_SECTION)
+    DUNE_THROW(IOError, "VTK-File is incomplete. It must end with </VTKFile>!");
+
+  assert(pieces_.size() == commSize);
+  readFromFile(pieces_[commRank], false);
+
+  if (create)
+    createGrid();
 }
 
 
@@ -250,14 +335,16 @@ Sections readDataArray (IStream& input, std::vector<T>& values, std::size_t max_
 
 template <class Grid, class Creator>
 typename VtkReader<Grid,Creator>::Sections
-VtkReader<Grid,Creator>::readPoints (std::ifstream& input)
+VtkReader<Grid,Creator>::readPoints (std::ifstream& input, std::string name)
 {
   using T = typename GlobalCoordinate::value_type;
   assert(numberOfPoints_ > 0);
   assert(dataArray_["points"].components == 3u);
 
+  Sections sec;
+
   std::vector<T> point_values;
-  auto sec = readDataArray(input, point_values, 3*numberOfPoints_, POINTS_DATA_ARRAY, POINTS);
+  sec = readDataArray(input, point_values, 3*numberOfPoints_, POINTS_DATA_ARRAY, POINTS);
   assert(sec == POINTS);
   assert(point_values.size() == 3*numberOfPoints_);
 
@@ -282,7 +369,6 @@ void VtkReader<Grid,Creator>::readPointsAppended (std::ifstream& input)
 {
   assert(numberOfPoints_ > 0);
   assert(dataArray_["points"].components == 3u);
-
   std::vector<T> point_values;
   readAppended(input, point_values, dataArray_["points"].offset);
   assert(point_values.size() == 3*numberOfPoints_);
@@ -321,6 +407,9 @@ VtkReader<Grid,Creator>::readCells (std::ifstream& input, std::string name)
     else
       max_size = numberOfCells_ * max_vertices;
     sec = readDataArray(input, vec_connectivity, max_size, CELLS_DATA_ARRAY, CELLS);
+  } else if (name == "global_point_ids") {
+    sec = readDataArray(input, vec_point_ids, numberOfPoints_, CELLS_DATA_ARRAY, CELLS);
+    assert(vec_point_ids.size() == numberOfPoints_);
   }
 
   return sec;
@@ -346,6 +435,13 @@ void VtkReader<Grid,Creator>::readCellsAppended (std::ifstream& input)
   assert(connectivity_data.type == Vtk::INT64);
   readAppended(input, vec_connectivity, connectivity_data.offset);
   assert(vec_connectivity.size() == std::size_t(vec_offsets.back()));
+
+  if (dataArray_.count("global_point_ids") > 0) {
+    auto point_id_data = dataArray_["global_point_ids"];
+    assert(point_id_data.type == Vtk::UINT64);
+    readAppended(input, vec_point_ids, point_id_data.offset);
+    assert(vec_point_ids.size() == numberOfPoints_);
+  }
 }
 
 
@@ -361,7 +457,7 @@ template <class T, class IStream>
 void read_compressed (T* buffer, unsigned char* buffer_in,
                       std::uint64_t bs, std::uint64_t cbs, IStream& input)
 {
-#ifdef HAVE_VTK_ZLIB
+#if HAVE_VTK_ZLIB
   uLongf uncompressed_space = uLongf(bs);
   uLongf compressed_space = uLongf(cbs);
 
@@ -442,7 +538,7 @@ void VtkReader<Grid,Creator>::createGrid () const
   assert(vec_types.size() == numberOfCells_);
   assert(vec_offsets.size() == numberOfCells_);
 
-  Creator::create(*factory_, vec_points, vec_types, vec_offsets, vec_connectivity);
+  Creator::create(*factory_, vec_points, vec_point_ids, vec_types, vec_offsets, vec_connectivity);
 }
 
 // Assume input already read the line <AppendedData ...>

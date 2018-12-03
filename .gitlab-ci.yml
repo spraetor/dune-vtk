@@ -3,18 +3,26 @@ before_script:
   - duneci-install-module https://gitlab.dune-project.org/martin.nolte/dune-polygongrid.git
   - duneci-install-module https://gitlab.dune-project.org/extensions/dune-spgrid.git
 
-debian:10 gcc-8-17:
-  image: registry.dune-project.org/docker/ci/dune:2.6-debian-10-gcc-8-17
+dune-2.6 gcc-6-14:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:2.6-debian-9-gcc-6-14
   script: duneci-standard-test
 
-debian:10 clang-6-libcpp-17:
-  image: registry.dune-project.org/docker/ci/dune:2.6-debian-10-clang-6-libcpp-17
+dune-2.6 gcc-8-17:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:2.6-debian-10-gcc-8-17
   script: duneci-standard-test
 
-debian:9 gcc-6-14:
-  image: registry.dune-project.org/docker/ci/dune:2.6-debian-9-gcc-6-14
+dune-2.6 clang-6-17:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:2.6-debian-10-clang-6-libcpp-17
   script: duneci-standard-test
 
-ubuntu:18.04 clang-6-17:
-  image: registry.dune-project.org/docker/ci/dune:2.6-ubuntu-18.04-clang-6-17
+dune-git gcc-7-14:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:git-debian-10-gcc-7-14
+  script: duneci-standard-test
+
+dune-git gcc-8-17:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:git-debian-10-gcc-8-noassert-17
+  script: duneci-standard-test
+
+dune-git clang-6-17:
+  image: registry.dune-project.org/docker/ci/dune-pdelab-deps:git-debian-10-clang-6-libcpp-17
   script: duneci-standard-test

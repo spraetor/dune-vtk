@@ -3,6 +3,8 @@
 #include <numeric>
 #include "unstructureddatacollector.hh"
 
+#include <dune/grid/utility/globalindexset.hh>
+
 namespace Dune
 {
 
@@ -40,6 +42,18 @@ public:
         data[idx + j] = T(v[j]);
       for (std::size_t j = v.size(); j < 3u; ++j)
         data[idx + j] = T(0);
+    }
+    return data;
+  }
+
+  /// Return a vector of global unique ids of the points
+  std::vector<std::uint64_t> pointIdsImpl () const
+  {
+    std::vector<std::uint64_t> data(gridView_.size(dim));
+    GlobalIndexSet<GridView> globalIndexSet(gridView_, dim);
+    auto const& indexSet = gridView_.indexSet();
+    for (auto const& vertex : vertices(gridView_, Partitions::all)) {
+      data[indexSet.index(vertex)] = std::uint64_t(globalIndexSet.index(vertex));
     }
     return data;
   }

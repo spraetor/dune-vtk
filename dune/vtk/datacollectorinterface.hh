@@ -19,7 +19,7 @@ public:
     asDerived().updateImpl();
   }
 
-  /// Return the number of overlapping elements
+  /// Return the number of ghost elements
   int ghostLevel () const
   {
     return asDerived().ghostLevelImpl();

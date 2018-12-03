@@ -9,7 +9,7 @@
 
 namespace Dune
 {
-  /// File-Reader for Vtk .vtu files
+  /// File-Reader for Vtk unstructured .vtu files
   /**
    * Reads .vtu files and constructs a grid from the cells stored in the file
    * Additionally, stored data can be read.
@@ -37,19 +37,29 @@ namespace Dune
     using GlobalCoordinate = typename Entity::Geometry::GlobalCoordinate;
 
   public:
-    /// Constructor. Stores a pointer to the GridFactory.
-    VtkReader (GridFactory<Grid>& factory)
-      : factory_(&factory)
-    {}
+    /// Constructor. Stores a pointer to the GridFactory and rank and size of the communicator.
+    VtkReader (GridFactory<Grid>& factory);
 
-    /// Read the grid from file with `filename` into the GridFactory `factory`
-    void readFromFile (std::string const& filename);
+    /// Read the grid from file with `filename` into the GridFactory \ref factory_
+    void readFromFile (std::string const& filename, bool create = true);
+
+    /// Read the grid from and input stream into the GridFactory \ref factory_
+    void readSerialFileFromStream (std::ifstream& input, bool create = true);
+
+    /// Read the grid from and input stream into the GridFactory \ref factory_
+    void readParallelFileFromStream (std::ifstream& input, int rank, int size, bool create = true);
 
     /// Implementation of \ref FileReader interface
     static void readFactoryImpl (GridFactory<Grid>& factory, std::string const& filename)
     {
       VtkReader reader{factory};
       reader.readFromFile(filename);
+    }
+
+    /// Return the filenames of parallel pieces
+    std::vector<std::string> const& pieces () const
+    {
+      return pieces_;
     }
 
   private:
@@ -69,7 +79,7 @@ namespace Dune
     }
 
     // Read vertex coordinates from `input` stream and store in into `factory`
-    Sections readPoints (std::ifstream& input);
+    Sections readPoints (std::ifstream& input, std::string name);
 
     template <class T>
     void readPointsAppended (std::ifstream& input);
@@ -107,13 +117,18 @@ namespace Dune
     void createGrid() const;
 
   private:
-    GridFactory<Grid>* factory_;
+    GridFactory<Grid>* factory_ = nullptr;
+
+    // the rank and size of the factory collective communication
+    int rank_ = 0;
+    int numRanks_ = 1;
 
     /// Data format, i.e. ASCII, BINARY or COMPRESSED. Read from xml attributes.
     Vtk::FormatTypes format_;
 
     // Temporary data to construct the grid elements
     std::vector<GlobalCoordinate> vec_points;
+    std::vector<std::uint64_t> vec_point_ids; //< Global unique vertex ID
     std::vector<std::uint8_t> vec_types; //< VTK cell type ID
     std::vector<std::int64_t> vec_offsets; //< offset of vertices of cell
     std::vector<std::int64_t> vec_connectivity; //< vertex indices of cell
@@ -124,6 +139,9 @@ namespace Dune
     // offset information for appended data
     // map Name -> {DataType,NumberOfComponents,Offset}
     std::map<std::string, DataArrayAttributes> dataArray_;
+
+    // vector of filenames of parallel pieces
+    std::vector<std::string> pieces_;
 
     /// Offset of beginning of appended data
     std::uint64_t offset0_;

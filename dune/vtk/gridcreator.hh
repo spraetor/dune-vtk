@@ -6,12 +6,29 @@
 #include <vector>
 
 #include <dune/common/exceptions.hh>
+#include <dune/common/hybridutilities.hh>
 #include <dune/grid/common/gridfactory.hh>
 
 #include "vtktypes.hh"
 
 namespace Dune
 {
+  template <class Factory, class... Args>
+  using HasInsertVertex = decltype( std::declval<Factory>().insertVertex(std::declval<Args>()...) );
+
+  namespace Impl
+  {
+    template <class GF, class = void>
+    struct VertexIdType { using type = unsigned int; };
+
+    template <class GF>
+    struct VertexIdType<GF, typename GF::VertexId> { using type = typename GF::VertexId; };
+  }
+
+  template <class GF>
+  using VertexId_t = typename Impl::VertexIdType<GF>::type;
+
+
   // Create a grid where the input points and connectivity is already
   // connected correctly.
   struct DefaultGridCreator
@@ -19,12 +36,23 @@ namespace Dune
     template <class Grid, class Coord>
     static void create (GridFactory<Grid>& factory,
                         std::vector<Coord> const& points,
+                        std::vector<std::uint64_t> const& point_ids,
                         std::vector<std::uint8_t> const& types,
                         std::vector<std::int64_t> const& offsets,
                         std::vector<std::int64_t> const& connectivity)
     {
-      for (auto const& p : points)
-        factory.insertVertex(p);
+      const auto hasInsertVertex = Std::is_detected<HasInsertVertex, GridFactory<Grid>, Coord, unsigned int>{};
+      if (point_ids.empty() || !hasInsertVertex.value) {
+        for (auto const& p : points)
+          factory.insertVertex(p);
+      } else {
+        Hybrid::ifElse(hasInsertVertex,
+        [&](auto id) {
+          using VertexId = VertexId_t<GridFactory<Grid>>;
+          for (std::size_t i = 0; i < points.size(); ++i)
+            id(factory).insertVertex(points[i], VertexId(point_ids[i]));
+        });
+      }
 
       std::size_t idx = 0;
       for (std::size_t i = 0; i < types.size(); ++i) {
@@ -74,19 +102,37 @@ namespace Dune
     template <class Grid, class Coord>
     static void create (GridFactory<Grid>& factory,
                         std::vector<Coord> const& points,
+                        std::vector<std::uint64_t> const& point_ids,
                         std::vector<std::uint8_t> const& types,
                         std::vector<std::int64_t> const& offsets,
                         std::vector<std::int64_t> const& connectivity)
     {
       std::size_t idx = 0;
       std::map<Coord, std::size_t, CoordLess> unique_points;
-      for (auto const& p : points) {
-        auto b = unique_points.emplace(std::make_pair(p,idx));
-        if (b.second) {
-          factory.insertVertex(p);
-          ++idx;
+
+      const auto hasInsertVertex = Std::is_detected<HasInsertVertex, GridFactory<Grid>, Coord, unsigned int>{};
+      if (point_ids.empty() || !hasInsertVertex.value) {
+        for (auto const& p : points) {
+          auto b = unique_points.emplace(std::make_pair(p,idx));
+          if (b.second) {
+            factory.insertVertex(p);
+            ++idx;
+          }
         }
+      } else {
+        Hybrid::ifElse(hasInsertVertex,
+        [&](auto id) {
+          using VertexId = VertexId_t<GridFactory<Grid>>;
+          for (std::size_t i = 0; i < points.size(); ++i) {
+            auto b = unique_points.emplace(std::make_pair(points[i],idx));
+            if (b.second) {
+              id(factory).insertVertex(points[i], VertexId(point_ids[i]));
+              ++idx;
+            }
+          }
+        });
       }
+
 
       idx = 0;
       for (std::size_t i = 0; i < types.size(); ++i) {
