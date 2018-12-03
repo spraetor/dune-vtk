@@ -113,5 +113,31 @@ namespace Dune
       bool noPermutation_;
     };
 
+
+    class FieldInfo
+    {
+    public:
+      FieldInfo (std::string name, int ncomps)
+        : name_(std::move(name))
+        , ncomps_(ncomps)
+      {}
+
+      /// The name of the data field
+      std::string const& name () const
+      {
+        return name_;
+      }
+
+      /// The number of components in the data field.
+      int ncomps () const
+      {
+        return ncomps_;
+      }
+
+    private:
+      std::string name_;
+      int ncomps_;
+    };
+
   } // end namespace Vtk
 } // end namespace Dune

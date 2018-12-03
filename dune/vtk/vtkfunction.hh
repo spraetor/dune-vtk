@@ -48,14 +48,25 @@ namespace Dune
 
   public:
     /// Constructor VtkFunction from legacy VTKFunction
-    VtkFunction (std::shared_ptr<VTKFunction<GridView> const> const& fct)
+    VtkFunction (std::shared_ptr<VTKFunction<GridView> const> const& fct,
+                 Std::optional<Vtk::DataTypes> type = {})
       : localFct_(fct)
       , name_(fct->name())
       , ncomps_(fct->ncomps())
-      , type_(Vtk::FLOAT64)
+      , type_(type ? *type : Vtk::FLOAT64)
     {}
 
     /// Construct VtkFunction from dune-functions GridFunction with Signature
+    // NOTE: Stores the localFunction(fct) by value.
+    /**
+     * \param fct     A Grid(View)-function, providing a `localFunction(fct)`
+     * \param name    The name to use component identification in the VTK file
+     * \param ncomps  Number of components of the pointwise data. Is extracted
+     *                from the range type of the GridFunction if not given.
+     * \param type    The \ref Vtk::DataTypes used in the output. E.g. FLOAT32,
+     *                or FLOAT64. Is extracted from the range type of the
+     *                GridFunction if not given.
+     **/
     template <class F,
       std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0>
     VtkFunction (F&& fct, std::string name,
@@ -70,6 +81,13 @@ namespace Dune
       type_ = type ? *type : Vtk::Map::type<R>();
     }
 
+    template <class F,
+      std::enable_if_t<Std::is_detected<HasLocalFunction,F>::value, int> = 0>
+    VtkFunction (F&& fct, Vtk::FieldInfo fieldInfo,
+                 Std::optional<Vtk::DataTypes> type = {})
+      : VtkFunction(std::forward<F>(fct), fieldInfo.name(), fieldInfo.ncomps(), type)
+    {}
+
     VtkFunction () = default;
 
     /// Create a LocalFunction
@@ -79,7 +97,7 @@ namespace Dune
     }
 
     /// Return a name associated with the function
-    std::string name () const
+    std::string const& name () const
     {
       return name_;
     }
