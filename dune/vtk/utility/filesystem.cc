@@ -26,7 +26,7 @@ namespace Dune { namespace filesystem {
 std::string path::string() const
 {
   if (empty())
-    return "";
+    return ".";
 
   auto it = begin();
   auto result = *it;
@@ -180,11 +180,11 @@ path relative(path const& a, path const& b)
   }
 
   // combine remaining parts of a to result path
-  path rel(*a_it++);
+  path rel(".");
   for (; a_it != a.end(); ++a_it)
     rel /= *a_it;
 
   return rel;
 }
 
-} } // end namespace Dec
+} } // end namespace Dune::filesystem
