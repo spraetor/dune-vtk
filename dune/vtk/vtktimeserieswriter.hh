@@ -58,16 +58,22 @@ namespace Dune
      * \param fn  Filename of the file to write to. Only the base part
      *            (without dir and extentsion) is used to write the intermediate
      *            file into a tmp directory.
+     * \param tmpDir  If the directory is given, it is used as tmp dir, otherwise /tmp.
      * \param writeCollection  Create a timeseries file directly
      **/
-    void writeTimestep (double time, std::string const& fn, bool writeCollection = true) const;
+    void writeTimestep (double time, std::string const& fn,
+                        Std::optional<std::string> tmpDir = {},
+                        bool writeCollection = true) const;
 
     /// Writes all timesteps to single timeseries file.
     // NOTE: requires an aforging call to \ref writeTimestep
     /**
      * Create a timeseries file with all timesteps written by \ref writeTimestep.
+     *
+     * \param fn   Filename of the Timeseries file. May contain a directory and any file extension.
+     * \param dir  The optional parameter specifies the directory of the partition files.
      **/
-    virtual void write (std::string const& fn) const override;
+    virtual void write (std::string const& fn, Std::optional<std::string> dir = {}) const override;
 
     /// Attach point data to the writer, \see VtkFunction for possible arguments
     template <class Function, class... Args>

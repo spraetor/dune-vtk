@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 
-#ifdef HAVE_ZLIB
+#if HAVE_ZLIB
 #include <zlib.h>
 #endif
 
@@ -39,24 +39,20 @@ VtkTimeseriesWriter<W>::~VtkTimeseriesWriter ()
 
 template <class W>
 void VtkTimeseriesWriter<W>
-  ::writeTimestep (double time, std::string const& fn, bool writeCollection) const
+  ::writeTimestep (double time, std::string const& fn, Std::optional<std::string> tmpDir, bool writeCollection) const
 {
   auto name = filesystem::path(fn).stem();
-  auto tmp = tmpDir_;
+  auto tmp = tmpDir ? filesystem::path(*tmpDir) : tmpDir_;
   tmp /= name.string();
 
   vtkWriter_.dataCollector_.update();
 
   std::string filenameBase = tmp.string();
 
-  int rank = 0;
-  int num_ranks = 1;
-  #ifdef HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-    if (num_ranks > 1)
-      filenameBase = tmp.string() + "_p" + std::to_string(rank);
-  #endif
+  int rank = vtkWriter_.rank_;
+  int numRanks = vtkWriter_.numRanks_;
+  if (numRanks > 1)
+    filenameBase = tmp.string() + "_p" + std::to_string(rank);
 
   if (!initialized_) {
     // write points and cells only once
@@ -78,28 +74,29 @@ void VtkTimeseriesWriter<W>
 
 template <class W>
 void VtkTimeseriesWriter<W>
-  ::write (std::string const& fn) const
+  ::write (std::string const& fn, Std::optional<std::string> dir) const
 {
   assert( initialized_ );
 
   auto p = filesystem::path(fn);
   auto name = p.stem();
   p.remove_filename();
-  p /= name.string();
 
-  std::string filename = p.string() + "_ts";
+  filesystem::path fn_dir = p;
+  filesystem::path data_dir = dir ? filesystem::path(*dir) : fn_dir;
+  filesystem::path rel_dir = filesystem::relative(data_dir, fn_dir);
 
-  int rank = 0;
-  int num_ranks = 1;
-#ifdef HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-    if (num_ranks > 1)
-      filename = p.string() + "_ts_p" + std::to_string(rank);
-#endif
+  std::string serial_fn = fn_dir.string() + '/' + name.string() + "_ts";
+  std::string parallel_fn = data_dir.string() + '/' + name.string() + "_ts";
+  std::string rel_fn = rel_dir.string() + '/' + name.string() + "_ts";
+
+  int rank = vtkWriter_.rank_;
+  int numRanks = vtkWriter_.numRanks_;
+  if (numRanks > 1)
+    serial_fn += "_p" + std::to_string(rank);
 
   { // write serial file
-    std::ofstream serial_out(filename + "." + vtkWriter_.getFileExtension(),
+    std::ofstream serial_out(serial_fn + "." + vtkWriter_.getFileExtension(),
                              std::ios_base::ate | std::ios::binary);
     assert(serial_out.is_open());
 
@@ -111,10 +108,9 @@ void VtkTimeseriesWriter<W>
     vtkWriter_.writeTimeseriesSerialFile(serial_out, filenameMesh_, timesteps_, blocks_);
   }
 
-#ifdef HAVE_MPI
-  if (num_ranks > 1 && rank == 0) {
+  if (numRanks > 1 && rank == 0) {
     // write parallel file
-    std::ofstream parallel_out(p.string() + "_ts.p" + vtkWriter_.getFileExtension(),
+    std::ofstream parallel_out(parallel_fn + ".p" + vtkWriter_.getFileExtension(),
                                std::ios_base::ate | std::ios::binary);
     assert(parallel_out.is_open());
 
@@ -123,9 +119,8 @@ void VtkTimeseriesWriter<W>
       ? std::numeric_limits<float>::digits10+2
       : std::numeric_limits<double>::digits10+2);
 
-    vtkWriter_.writeTimeseriesParallelFile(parallel_out, p.string() + "_ts", num_ranks, timesteps_);
+    vtkWriter_.writeTimeseriesParallelFile(parallel_out, rel_fn, numRanks, timesteps_);
   }
-#endif
 }
 
 } // end namespace Dune
