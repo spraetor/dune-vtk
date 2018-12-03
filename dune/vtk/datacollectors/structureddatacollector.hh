@@ -101,15 +101,13 @@ public: // default implementation:
     subDataCollector_.update();
 
 #if HAVE_MPI
-    int rank = -1;
-    int num_ranks = -1;
-    MPI_Comm_rank(gridView_.comm(), &rank);
-    MPI_Comm_size(gridView_.comm(), &num_ranks);
+    int rank = gridView_.comm().rank();
+    int numRanks = gridView_.comm().size();
 
     if (rank == 0) {
-      extents_.resize(num_ranks);
-      requests_.resize(num_ranks, MPI_REQUEST_NULL);
-      for (int i = 1; i < num_ranks; ++i)
+      extents_.resize(numRanks);
+      requests_.resize(numRanks, MPI_REQUEST_NULL);
+      for (int i = 1; i < numRanks; ++i)
         MPI_Irecv(extents_[i].data(), extents_[i].size(), MPI_INT, i, /*tag=*/6, gridView_.comm(), &requests_[i]);
     }
 
@@ -149,8 +147,7 @@ public: // default implementation:
     MPI_Test(&sendRequest_, &sendFlag, &sendStatus);
 
     if (sendFlag) {
-      int rank = -1;
-      MPI_Comm_rank(gridView_.comm(), &rank);
+      int rank = gridView_.comm().rank();
       if (rank != 0) {
         MPI_Isend(extent.data(), extent.size(), MPI_INT, 0, /*tag=*/6, gridView_.comm(), &sendRequest_);
       } else {
@@ -169,12 +166,11 @@ public: // default implementation:
 #if HAVE_MPI
     writer(0, extents_[0], true);
 
-    int num_ranks = -1;
-    MPI_Comm_size(gridView_.comm(), &num_ranks);
-    for (int p = 1; p < num_ranks; ++p) {
+    int numRanks = gridView_.comm().size();
+    for (int p = 1; p < numRanks; ++p) {
       int idx = -1;
       MPI_Status status;
-      MPI_Waitany(num_ranks, requests_.data(), &idx, &status);
+      MPI_Waitany(numRanks, requests_.data(), &idx, &status);
       if (idx != MPI_UNDEFINED) {
         assert(idx == status.MPI_SOURCE && status.MPI_TAG == 6);
         writer(idx, extents_[idx], true);
