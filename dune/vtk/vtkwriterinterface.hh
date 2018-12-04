@@ -7,18 +7,12 @@
 
 #include <dune/common/std/optional.hh>
 #include <dune/vtk/filewriter.hh>
+#include <dune/vtk/forward.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 
 namespace Dune
 {
-  // forward declaration
-  template <class VtkWriter>
-  class VtkTimeseriesWriter;
-
-  template <class VtkWriter>
-  class PvdWriter;
-
   /// Interface for file writers for the Vtk XML file formats
   template <class GridView, class DataCollector>
   class VtkWriterInterface

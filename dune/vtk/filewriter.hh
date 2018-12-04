@@ -3,6 +3,8 @@
 #include <string>
 #include <dune/common/std/optional.hh>
 
+#include <dune/vtk/forward.hh>
+
 namespace Dune
 {
   class FileWriter

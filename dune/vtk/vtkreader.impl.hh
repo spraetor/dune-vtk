@@ -16,22 +16,6 @@
 namespace Dune {
 
 template <class Grid, class Creator>
-VtkReader<Grid,Creator>::VtkReader (GridFactory<Grid>& factory)
-  : factory_(&factory)
-{
-#if DUNE_VERSION_LT(DUNE_GRID,2,7)
-  #if HAVE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
-  MPI_Comm_size(MPI_COMM_WORLD, &numRanks_);
-  #endif
-#else
-  rank_ = factory.comm().rank();
-  numRanks_ = factory.comm().size();
-#endif
-}
-
-
-template <class Grid, class Creator>
 void VtkReader<Grid,Creator>::readFromFile (std::string const& filename, bool create)
 {
   // check whether file exists!
@@ -45,7 +29,7 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename, bool cr
   if (ext == ".vtu") {
     readSerialFileFromStream(input, create);
   } else if (ext == ".pvtu") {
-    readParallelFileFromStream(input, rank_, numRanks_, create);
+    readParallelFileFromStream(input, creator_.rank(), creator_.size(), create);
   } else {
     DUNE_THROW(IOError, "File has unknown file-extension '" << ext << "'. Allowed are only '.vtu' and '.pvtu'.");
   }
@@ -55,6 +39,7 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename, bool cr
 template <class Grid, class Creator>
 void VtkReader<Grid,Creator>::readSerialFileFromStream (std::ifstream& input, bool create)
 {
+  clear();
   std::string compressor = "";
   std::string data_name = "", data_format = "";
   Vtk::DataTypes data_type = Vtk::UNKNOWN;
@@ -247,7 +232,7 @@ void VtkReader<Grid,Creator>::readSerialFileFromStream (std::ifstream& input, bo
 template <class Grid, class Creator>
 void VtkReader<Grid,Creator>::readParallelFileFromStream (std::ifstream& input, int commRank, int commSize, bool create)
 {
-  pieces_.clear();
+  clear();
 
   Sections section = NO_SECTION;
   for (std::string line; std::getline(input, line); ) {
@@ -289,9 +274,6 @@ void VtkReader<Grid,Creator>::readParallelFileFromStream (std::ifstream& input, 
 
   if (section != NO_SECTION)
     DUNE_THROW(IOError, "VTK-File is incomplete. It must end with </VTKFile>!");
-
-  assert(pieces_.size() == commSize);
-  readFromFile(pieces_[commRank], false);
 
   if (create)
     createGrid();
@@ -528,13 +510,17 @@ void VtkReader<Grid,Creator>::readAppended (std::ifstream& input, std::vector<T>
 
 
 template <class Grid, class Creator>
-void VtkReader<Grid,Creator>::createGrid () const
+void VtkReader<Grid,Creator>::createGrid ()
 {
   assert(vec_points.size() == numberOfPoints_);
   assert(vec_types.size() == numberOfCells_);
   assert(vec_offsets.size() == numberOfCells_);
 
-  Creator::create(*factory_, vec_points, vec_point_ids, vec_types, vec_offsets, vec_connectivity);
+  if (!vec_points.empty())
+    creator_.insertVertices(vec_points, vec_point_ids);
+  if (!vec_types.empty())
+    creator_.insertElements(vec_types, vec_offsets, vec_connectivity);
+  creator_.insertPieces(pieces_);
 }
 
 // Assume input already read the line <AppendedData ...>
@@ -603,6 +589,23 @@ std::map<std::string, std::string> VtkReader<Grid,Creator>::parseXml (std::strin
   }
 
   return attr;
+}
+
+
+template <class Grid, class Creator>
+void VtkReader<Grid,Creator>::clear ()
+{
+  vec_points.clear();
+  vec_point_ids.clear();
+  vec_types.clear();
+  vec_offsets.clear();
+  vec_connectivity.clear();
+  dataArray_.clear();
+  pieces_.clear();
+
+  numberOfCells_ = 0;
+  numberOfPoints_ = 0;
+  offset0_ = 0;
 }
 
 } // end namespace Dune
