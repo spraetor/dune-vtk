@@ -14,22 +14,20 @@ struct Cells
   std::vector<std::int64_t> connectivity;
 };
 
-template <class GridView, class Derived>
+template <class GridView, class Derived, class Partition>
 class UnstructuredDataCollectorInterface
-    : public DataCollectorInterface<GridView, Derived>
+    : public DataCollectorInterface<GridView, Derived, Partition>
 {
-  using Super = DataCollectorInterface<GridView, Derived>;
+  using Super = DataCollectorInterface<GridView, Derived, Partition>;
+
+public:
+  using Super::dim;
+  using Super::partition;
 
 public:
   UnstructuredDataCollectorInterface (GridView const& gridView)
     : Super(gridView)
   {}
-
-  /// \brief Return the number of cells in the grid
-  std::uint64_t numCells () const
-  {
-    return this->asDerived().numCellsImpl();
-  }
 
   /// \brief Return cell types, offsets, and connectivity. \see Cells
   Cells cells () const

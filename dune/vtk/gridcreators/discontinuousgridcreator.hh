@@ -76,14 +76,13 @@ namespace Dune
           vtk_cell.push_back(new_idx);
         }
 
-        if (cellType.noPermutation())
+        if (cellType.noPermutation()) {
           factory().insertElement(type,vtk_cell);
-        else {
+        } else {
           // apply index permutation
           std::vector<unsigned int> cell(nNodes);
           for (int j = 0; j < nNodes; ++j)
             cell[j] = vtk_cell[cellType.permutation(j)];
-
           factory().insertElement(type,cell);
         }
       }

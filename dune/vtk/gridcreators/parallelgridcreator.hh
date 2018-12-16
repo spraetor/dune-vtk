@@ -29,20 +29,19 @@ namespace Dune
       : Super(factory)
     {}
 
-    using Super::factory;
     void insertVerticesImpl (std::vector<GlobalCoordinate> const& points,
                              std::vector<std::uint64_t> const& point_ids)
     {
       assert(point_ids.size() == points.size());
       for (std::size_t i = 0; i < points.size(); ++i)
-        factory().insertVertex(points[i], VertexId(point_ids[i]));
+        this->factory().insertVertex(points[i], VertexId(point_ids[i]));
     }
 
     void insertPiecesImpl (std::vector<std::string> const& pieces)
     {
-      if (int(pieces.size()) == this->size()) {
-        VtkReader<Grid, Self> pieceReader(factory());
-        pieceReader.readFromFile(pieces[this->rank()], true);
+      if (int(pieces.size()) == this->comm().size()) {
+        VtkReader<Grid, Self> pieceReader(this->factory());
+        pieceReader.readFromFile(pieces[this->comm().rank()], true);
       }
     }
   };

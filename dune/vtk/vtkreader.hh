@@ -69,7 +69,7 @@ namespace Dune
     }
 
     /// Construct a grid using the GridCreator
-    void createGrid();
+    void createGrid(bool insertPieces = true);
 
     /// Return the filenames of parallel pieces
     std::vector<std::string> const& pieces () const
@@ -128,6 +128,11 @@ namespace Dune
 
     // clear all vectors
     void clear ();
+
+    auto comm () const
+    {
+      return MPIHelper::getCollectiveCommunication();
+    }
 
   private:
     std::unique_ptr<GridCreator> creatorStorage_ = nullptr;

@@ -20,6 +20,10 @@ protected:
   using ctype = typename GridView::ctype;
 
 public:
+  using Super::dim;
+  using Super::partition;
+
+public:
   StructuredDataCollectorInterface (GridView const& gridView)
     : Super(gridView)
     , subDataCollector_(gridView)
@@ -101,6 +105,16 @@ public: // default implementation:
 
     sendRequest_ = MPI_REQUEST_NULL;
 #endif
+  }
+
+  /// Return number of grid cells
+  std::uint64_t numCellsImpl () const
+  {
+    auto extent = this->extent();
+    std::uint64_t num = 1;
+    for (int d = 0; d < dim; ++d)
+      num *= extent[2*d+1] - extent[2*d];
+    return num;
   }
 
   /// Return number of grid vertices
@@ -192,14 +206,14 @@ public: // default implementation:
     auto extent = this->extent();
 
     std::array<std::vector<T>, 3> ordinates{};
-    for (int d = 0; d < GridView::dimension; ++d) {
+    for (int d = 0; d < dim; ++d) {
       auto s = extent[2*d+1] - extent[2*d] + 1;
       ordinates[d].resize(s);
       for (int i = 0; i < s; ++i)
         ordinates[d][i] = origin[d] + (extent[2*d] + i)*spacing[d];
     }
 
-    for (int d = GridView::dimension; d < 3; ++d)
+    for (int d = dim; d < 3; ++d)
       ordinates[d].resize(1, T(0));
 
     return ordinates;

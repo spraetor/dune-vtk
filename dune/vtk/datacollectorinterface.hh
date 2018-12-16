@@ -5,10 +5,21 @@
 
 namespace Dune {
 
-template <class GridView, class Derived>
+template <class GridView, class Derived, class Partition>
 class DataCollectorInterface
 {
 public:
+  /// The partitionset to collect data from
+  static constexpr auto partition = Partition{};
+
+  /// The dimension of the grid
+  enum { dim = GridView::dimension };
+
+  /// The dimension of the world
+  enum { dow = GridView::dimensionworld };
+
+public:
+  /// Store a copy of the GridView
   DataCollectorInterface (GridView const& gridView)
     : gridView_(gridView)
   {}
@@ -25,7 +36,13 @@ public:
     return asDerived().ghostLevelImpl();
   }
 
-  /// Return the number of points in the grid
+  /// \brief Return the number of cells in (this partition of the) grid
+  std::uint64_t numCells () const
+  {
+    return asDerived().numCellsImpl();
+  }
+
+  /// Return the number of points in (this partition of the) grid
   std::uint64_t numPoints () const
   {
     return asDerived().numPointsImpl();
@@ -59,8 +76,9 @@ public:
     return asDerived().template pointDataImpl<T>(fct);
   }
 
-  /// Return a flat vector of function values evaluated at the cells. \see pointData.
+  /// Return a flat vector of function values evaluated at the cells in the order of traversal.
   /**
+   * \see pointData.
    * Note: Cells might be descibred explicitly by connectivity, offsets, and types, e.g. in
    * an UnstructuredGrid, or might be described implicitly by the grid type, e.g. in
    * StructuredGrid.
@@ -95,7 +113,7 @@ public: // default implementations
     return gridView_.overlapSize(0);
   }
 
-  // Evaluate `fct` in center of cell
+  // Evaluate `fct` in center of cell.
   template <class T, class VtkFunction>
   std::vector<T> cellDataImpl (VtkFunction const& fct) const;
 

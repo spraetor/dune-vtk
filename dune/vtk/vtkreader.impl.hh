@@ -28,8 +28,9 @@ void VtkReader<Grid,Creator>::readFromFile (std::string const& filename, bool cr
   std::string ext = filesystem::path(filename).extension().string();
   if (ext == ".vtu") {
     readSerialFileFromStream(input, create);
+    pieces_.push_back(filename);
   } else if (ext == ".pvtu") {
-    readParallelFileFromStream(input, creator_.rank(), creator_.size(), create);
+    readParallelFileFromStream(input, comm().rank(), comm().size(), create);
   } else {
     DUNE_THROW(IOError, "File has unknown file-extension '" << ext << "'. Allowed are only '.vtu' and '.pvtu'.");
   }
@@ -510,7 +511,7 @@ void VtkReader<Grid,Creator>::readAppended (std::ifstream& input, std::vector<T>
 
 
 template <class Grid, class Creator>
-void VtkReader<Grid,Creator>::createGrid ()
+void VtkReader<Grid,Creator>::createGrid (bool insertPieces)
 {
   assert(vec_points.size() == numberOfPoints_);
   assert(vec_types.size() == numberOfCells_);
@@ -520,7 +521,8 @@ void VtkReader<Grid,Creator>::createGrid ()
     creator_.insertVertices(vec_points, vec_point_ids);
   if (!vec_types.empty())
     creator_.insertElements(vec_types, vec_offsets, vec_connectivity);
-  creator_.insertPieces(pieces_);
+  if (insertPieces)
+    creator_.insertPieces(pieces_);
 }
 
 // Assume input already read the line <AppendedData ...>

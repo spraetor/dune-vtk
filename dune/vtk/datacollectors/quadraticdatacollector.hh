@@ -8,12 +8,14 @@ namespace Dune
 /// Implementation of \ref DataCollector for quadratic cells, with continuous data.
 template <class GridView>
 class QuadraticDataCollector
-    : public UnstructuredDataCollectorInterface<GridView, QuadraticDataCollector<GridView>>
+    : public UnstructuredDataCollectorInterface<GridView, QuadraticDataCollector<GridView>, Partitions::All>
 {
-  enum { dim = GridView::dimension };
-
   using Self = QuadraticDataCollector;
-  using Super = UnstructuredDataCollectorInterface<GridView, Self>;
+  using Super = UnstructuredDataCollectorInterface<GridView, Self, Partitions::All>;
+
+public:
+  using Super::dim;
+  using Super::partition; // NOTE: quadratic data-collector currently implemented for the All partition only
 
 public:
   QuadraticDataCollector (GridView const& gridView)
@@ -36,7 +38,7 @@ public:
   {
     std::vector<T> data(this->numPoints() * 3);
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& element : elements(gridView_, Partitions::interior)) {
+    for (auto const& element : elements(gridView_, partition)) {
       auto geometry = element.geometry();
       auto refElem = referenceElement<T,dim>(element.type());
 
@@ -82,7 +84,7 @@ public:
 
     std::int64_t old_o = 0;
     auto const& indexSet = gridView_.indexSet();
-    for (auto const& c : elements(gridView_, Partitions::interior)) {
+    for (auto const& c : elements(gridView_, partition)) {
       Vtk::CellType cellType(c.type(), Vtk::QUADRATIC);
       for (unsigned int j = 0; j < c.subEntities(dim); ++j) {
         int k = cellType.permutation(j);
@@ -107,7 +109,7 @@ public:
     std::vector<T> data(this->numPoints() * fct.ncomps());
     auto const& indexSet = gridView_.indexSet();
     auto localFct = localFunction(fct);
-    for (auto const& e : elements(gridView_, Partitions::interior)) {
+    for (auto const& e : elements(gridView_, partition)) {
       localFct.bind(e);
       Vtk::CellType cellType{e.type(), Vtk::QUADRATIC};
       auto refElem = referenceElement(e.geometry());

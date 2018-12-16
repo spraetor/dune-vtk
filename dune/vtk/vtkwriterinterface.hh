@@ -25,6 +25,7 @@ namespace Dune
     static constexpr int dimension = GridView::dimension;
 
     using VtkFunction = Dune::VtkFunction<GridView>;
+    using Communicator = CollectiveCommunication<typename MPIHelper::MPICommunicator>;
     using pos_type = typename std::ostream::pos_type;
 
     enum PositionTypes {
@@ -38,8 +39,6 @@ namespace Dune
                         Vtk::FormatTypes format = Vtk::BINARY,
                         Vtk::DataTypes datatype = Vtk::FLOAT32)
       : dataCollector_(gridView)
-      , rank_(gridView.comm().rank())
-      , numRanks_(gridView.comm().size())
       , format_(format)
       , datatype_(datatype)
     {
@@ -148,12 +147,13 @@ namespace Dune
       return datatype_;
     }
 
+    auto comm () const
+    {
+      return MPIHelper::getCollectiveCommunication();
+    }
+
   protected:
     mutable DataCollector dataCollector_;
-
-    // the rank and size of the gridView collective communication
-    int rank_ = 0;
-    int numRanks_ = 1;
 
     Vtk::FormatTypes format_;
     Vtk::DataTypes datatype_;

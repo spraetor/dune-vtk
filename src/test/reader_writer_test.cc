@@ -105,27 +105,31 @@ void reader_test (MPIHelper& mpi, Test& test)
     ext = ".pvtu";
 
   for (auto const& test_case : test_cases) {
-    GridFactory<Grid> factory;
-    VtkReader<Grid> reader{factory};
-    reader.readFromFile("reader_writer_test_" + std::get<0>(test_case) + ext);
+    std::vector<std::string> pieces1, pieces2;
 
-    std::unique_ptr<Grid> grid = Hybrid::ifElse(IsALUGrid<Grid>{},
-      [&](auto id) { return id(factory).createGrid(std::true_type{}); },
-      [&](auto id) { return id(factory).createGrid(); });
-    std::vector<std::string> pieces1 = grid->comm().size() > 1 ?
-      reader.pieces() :
-      std::vector<std::string>{"reader_writer_test_" + std::get<0>(test_case) + ".vtu"};
+    {
+      GridFactory<Grid> factory;
+      VtkReader<Grid> reader{factory};
+      reader.readFromFile("reader_writer_test_" + std::get<0>(test_case) + ext);
 
-    VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
-      std::get<1>(test_case), std::get<2>(test_case));
-    vtkWriter.write("reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
+      std::unique_ptr<Grid> grid{ Hybrid::ifElse(IsALUGrid<Grid>{},
+        [&](auto id) { return id(factory).createGrid(std::true_type{}); },
+        [&](auto id) { return id(factory).createGrid(); }) };
+      pieces1 = mpi.size() > 1 ? reader.pieces() :
+        std::vector<std::string>{"reader_writer_test_" + std::get<0>(test_case) + ".vtu"};
 
-    GridFactory<Grid> factory2;
-    VtkReader<Grid> reader2{factory2};
-    reader2.readFromFile("reader_writer_test_" + std::get<0>(test_case) + "_2" + ext, false);
-    std::vector<std::string> pieces2 = grid->comm().size() > 1 ?
-      reader.pieces() :
-      std::vector<std::string>{"reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"};
+      VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
+        std::get<1>(test_case), std::get<2>(test_case));
+      vtkWriter.write("reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
+    }
+
+    {
+      GridFactory<Grid> factory2;
+      VtkReader<Grid> reader2{factory2};
+      reader2.readFromFile("reader_writer_test_" + std::get<0>(test_case) + "_2" + ext, false);
+      pieces2 = mpi.size() > 1 ? reader2.pieces() :
+        std::vector<std::string>{"reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"};
+    }
 
     test.check(pieces1.size() == pieces2.size(), "pieces1.size == pieces2.size");
     for (std::size_t i = 0; i < pieces1.size(); ++i)

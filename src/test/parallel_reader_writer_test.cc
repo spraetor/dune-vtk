@@ -66,16 +66,13 @@ bool compare_files (std::string const& fn1, std::string const& fn2)
   return true;
 }
 
-using TestCase = std::tuple<std::string,Vtk::FormatTypes,Vtk::DataTypes>;
-using TestCases = std::set<TestCase>;
-static TestCases test_cases = {
-  {"ascii32", Vtk::ASCII, Vtk::FLOAT32},
-  {"bin32", Vtk::BINARY, Vtk::FLOAT32},
-  {"zlib32", Vtk::COMPRESSED, Vtk::FLOAT32},
-  {"ascii64", Vtk::ASCII, Vtk::FLOAT64},
-  {"bin64", Vtk::BINARY, Vtk::FLOAT64},
-  {"zlib64", Vtk::COMPRESSED, Vtk::FLOAT64},
-};
+
+template <class G> struct HasParallelGridFactory : std::false_type {};
+#if DUNE_VERSION_GT(DUNE_GRID,2,6) && HAVE_DUNE_ALUGRID
+template<int dim, int dimworld, Dune::ALUGridElementType elType, Dune::ALUGridRefinementType refineType, class Comm>
+struct HasParallelGridFactory<Dune::ALUGrid<dim,dimworld,elType,refineType,Comm>> : std::true_type {};
+#endif
+
 
 template <class Test>
 void compare (Test& test, filesystem::path const& dir, filesystem::path const& name)
@@ -85,71 +82,87 @@ void compare (Test& test, filesystem::path const& dir, filesystem::path const& n
 }
 
 template <class GridView>
-void writer_test (GridView const& gridView)
+void writer_test (GridView const& gridView, std::string base_name)
 {
-  for (auto const& test_case : test_cases) {
-    VtkUnstructuredGridWriter<GridView> vtkWriter(gridView, std::get<1>(test_case), std::get<2>(test_case));
-    vtkWriter.write("parallel_reader_writer_test_" + std::get<0>(test_case) + ".vtu");
-  }
+  VtkUnstructuredGridWriter<GridView> vtkWriter(gridView, Vtk::ASCII, Vtk::FLOAT32);
+  vtkWriter.write(base_name + ".vtu");
 }
 
-template <class G> struct IsALUGrid : std::false_type {};
-#if DUNE_VERSION_GT(DUNE_GRID,2,6) && HAVE_DUNE_ALUGRID
-template<int dim, int dimworld, Dune::ALUGridElementType elType, Dune::ALUGridRefinementType refineType, class Comm>
-struct IsALUGrid<Dune::ALUGrid<dim,dimworld,elType,refineType,Comm>> : std::true_type {};
-#endif
-
 template <class Grid, class Creator>
-void reader_test (MPIHelper& mpi, TestSuite& test)
+void reader_writer_test(MPIHelper& mpi, TestSuite& test, std::string const& testName, bool doLoadBalance = true)
 {
+  std::cout << "== " << testName << "\n";
+  std::string base_name = "parallel_rw_dim" + std::to_string(Grid::dimension);
+  std::vector<std::string> pieces1, pieces2;
+
   std::string ext = ".vtu";
   if (mpi.size() > 1)
     ext = ".pvtu";
 
-  TestCase test_case = {"ascii32", Vtk::ASCII, Vtk::FLOAT32};
-
-  GridFactory<Grid> factory;
-  VtkReader<Grid, Creator> reader{factory};
-  reader.readFromFile("parallel_reader_writer_test_" + std::get<0>(test_case) + ext);
-
-  std::unique_ptr<Grid> grid = Hybrid::ifElse(IsALUGrid<Grid>{},
-    [&](auto id) { return id(factory).createGrid(std::true_type{}); },
-    [&](auto id) { return id(factory).createGrid(); });
-  std::vector<std::string> pieces1 = grid->comm().size() > 1 ?
-    reader.pieces() :
-    std::vector<std::string>{"parallel_reader_writer_test_" + std::get<0>(test_case) + ".vtu"};
-
-  VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
-    std::get<1>(test_case), std::get<2>(test_case));
-  vtkWriter.write("parallel_reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
-
-  GridFactory<Grid> factory2;
-  VtkReader<Grid, Creator> reader2{factory2};
-  reader2.readFromFile("parallel_reader_writer_test_" + std::get<0>(test_case) + "_2" + ext, false);
-  std::vector<std::string> pieces2 = grid->comm().size() > 1 ?
-    reader.pieces() :
-    std::vector<std::string>{"parallel_reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"};
-
-  test.check(pieces1.size() == pieces2.size(), "pieces1.size == pieces2.size");
-  for (std::size_t i = 0; i < pieces1.size(); ++i)
-    test.check(compare_files(pieces1[i], pieces2[i]));
-}
-
-
-template <class Grid, class Creator>
-void reader_writer_test(MPIHelper& mpi, TestSuite& test, std::string const& testName)
-{
-  std::cout << "== " << testName << "\n";
+  // Step 1: create a new grid and write it to file1
   const int dim = Grid::dimension;
-  FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
-  FieldVector<double,dim> upperRight; upperRight = 1.0;
-  auto numElements = filledArray<dim,unsigned int>(4);
-  auto gridPtr = StructuredGridFactory<Grid>::createSimplexGrid(lowerLeft, upperRight, numElements);
-  gridPtr->loadBalance();
+  {
+    FieldVector<double,dim> lowerLeft; lowerLeft = 0.0;
+    FieldVector<double,dim> upperRight; upperRight = 1.0;
+    auto numElements = filledArray<dim,unsigned int>(4);
+    auto gridPtr = StructuredGridFactory<Grid>::createSimplexGrid(lowerLeft, upperRight, numElements);
+    gridPtr->loadBalance();
+    // std::cout << "write1\n";
+    writer_test(gridPtr->leafGridView(), base_name);
+  }
 
-  writer_test(gridPtr->leafGridView());
-  MPI_Barrier(MPI_COMM_WORLD);
-  reader_test<Grid, Creator>(mpi,test);
+  mpi.getCollectiveCommunication().barrier(); // need a barrier between write and read
+
+  // Step 2: read the grid from file1 and write it back to file2
+  { GridFactory<Grid> factory;
+    // std::cout << "read1\n";
+    VtkReader<Grid, Creator> reader{factory};
+    reader.readFromFile(base_name + ext);
+
+    std::unique_ptr<Grid> grid{ Hybrid::ifElse(HasParallelGridFactory<Grid>{},
+      [&](auto id) { return id(factory).createGrid(std::true_type{}); },
+      [&](auto id) { return id(factory).createGrid(); }) };
+    if (doLoadBalance)
+      grid->loadBalance();
+
+    writer_test(grid->leafGridView(), base_name + "_1");
+  }
+
+  mpi.getCollectiveCommunication().barrier();
+
+  // Step 3: read the (parallel) file1 to get the piece filenames
+  { GridFactory<Grid> factory;
+    VtkReader<Grid, Creator> reader{factory};
+    reader.readFromFile(base_name + "_1" + ext);
+
+    std::unique_ptr<Grid> grid{ Hybrid::ifElse(HasParallelGridFactory<Grid>{},
+      [&](auto id) { return id(factory).createGrid(std::true_type{}); },
+      [&](auto id) { return id(factory).createGrid(); }) };
+    if (doLoadBalance)
+      grid->loadBalance();
+    pieces1 = reader.pieces();
+
+    writer_test(grid->leafGridView(), base_name + "_2");
+  }
+
+  mpi.getCollectiveCommunication().barrier();
+
+  // Step 4: read the (parallel) file2 to get the piece filenames
+  { GridFactory<Grid> factory;
+    VtkReader<Grid, Creator> reader{factory};
+    reader.readFromFile(base_name + "_2" + ext, false);
+
+    pieces2 = reader.pieces();
+  }
+
+  mpi.getCollectiveCommunication().barrier();
+
+  // Step 4: compare the pieces
+  if (mpi.rank() == 0) {
+    test.check(pieces1.size() == pieces2.size(), "pieces1.size == pieces2.size");
+    for (std::size_t i = 0; i < pieces1.size(); ++i)
+      test.check(compare_files(pieces1[i], pieces2[i]), "compare(" + pieces1[i] + ", " + pieces2[i] + ")");
+  }
 }
 
 #if HAVE_DUNE_ALUGRID
@@ -175,10 +188,10 @@ int main (int argc, char** argv)
   reader_writer_test<ALUGridType<2>, SerialGridCreator<ALUGridType<2>>>(mpi, test, "ALUGridType<2>");
   reader_writer_test<ALUGridType<3>, SerialGridCreator<ALUGridType<3>>>(mpi, test, "ALUGridType<3>");
 
-// #if DUNE_VERSION_LT(DUNE_GRID,2,7)
-  reader_writer_test<ALUGridType<2>, ParallelGridCreator<ALUGridType<2>>>(mpi, test, "ALUGridType<2, Parallel>");
-  reader_writer_test<ALUGridType<3>, ParallelGridCreator<ALUGridType<3>>>(mpi, test, "ALUGridType<3, Parallel>");
-// #endif
+  if (HasParallelGridFactory<ALUGridType<2>>{})
+    reader_writer_test<ALUGridType<2>, ParallelGridCreator<ALUGridType<2>>>(mpi, test, "ALUGridType<2, Parallel>", false);
+  if (HasParallelGridFactory<ALUGridType<3>>{})
+    reader_writer_test<ALUGridType<3>, ParallelGridCreator<ALUGridType<3>>>(mpi, test, "ALUGridType<3, Parallel>", false);
 #endif
 
   return test.exit();

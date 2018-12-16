@@ -4,18 +4,18 @@ namespace Dune
 {
   // forward declaration of all classes in dune-vtk
 
-  template <class GridView, class Derived>
+  template <class GridView, class Derived, class Partition = Partitions::InteriorBorder>
   class DataCollectorInterface;
 
   // @{ datacollectors
-  template <class GridView, class Derived>
+  template <class GridView, class Derived, class Partition = Partitions::InteriorBorder>
   class UnstructuredDataCollectorInterface;
 
   // @{ unstructured-datacollectors
-  template <class GridView>
+  template <class GridView, class Partition = Partitions::InteriorBorder>
   class ContinuousDataCollector;
 
-  template <class GridView>
+  template <class GridView, class Partition = Partitions::InteriorBorder>
   class DiscontinuousDataCollector;
 
   template <class GridView>

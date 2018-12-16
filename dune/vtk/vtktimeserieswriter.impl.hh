@@ -49,10 +49,8 @@ void VtkTimeseriesWriter<W>
 
   std::string filenameBase = tmp.string();
 
-  int rank = vtkWriter_.rank_;
-  int numRanks = vtkWriter_.numRanks_;
-  if (numRanks > 1)
-    filenameBase = tmp.string() + "_p" + std::to_string(rank);
+  if (vtkWriter_.comm().size() > 1)
+    filenameBase = tmp.string() + "_p" + std::to_string(vtkWriter_.comm().rank());
 
   if (!initialized_) {
     // write points and cells only once
@@ -90,10 +88,10 @@ void VtkTimeseriesWriter<W>
   std::string parallel_fn = data_dir.string() + '/' + name.string() + "_ts";
   std::string rel_fn = rel_dir.string() + '/' + name.string() + "_ts";
 
-  int rank = vtkWriter_.rank_;
-  int numRanks = vtkWriter_.numRanks_;
-  if (numRanks > 1)
-    serial_fn += "_p" + std::to_string(rank);
+  int commRank = vtkWriter_.comm().rank();
+  int commSize = vtkWriter_.comm().size();
+  if (commSize > 1)
+    serial_fn += "_p" + std::to_string(commRank);
 
   { // write serial file
     std::ofstream serial_out(serial_fn + "." + vtkWriter_.getFileExtension(),
@@ -108,7 +106,7 @@ void VtkTimeseriesWriter<W>
     vtkWriter_.writeTimeseriesSerialFile(serial_out, filenameMesh_, timesteps_, blocks_);
   }
 
-  if (numRanks > 1 && rank == 0) {
+  if (commSize > 1 && commRank == 0) {
     // write parallel file
     std::ofstream parallel_out(parallel_fn + ".p" + vtkWriter_.getFileExtension(),
                                std::ios_base::ate | std::ios::binary);
@@ -119,7 +117,7 @@ void VtkTimeseriesWriter<W>
       ? std::numeric_limits<float>::digits10+2
       : std::numeric_limits<double>::digits10+2);
 
-    vtkWriter_.writeTimeseriesParallelFile(parallel_out, rel_fn, numRanks, timesteps_);
+    vtkWriter_.writeTimeseriesParallelFile(parallel_out, rel_fn, commSize, timesteps_);
   }
 }
 

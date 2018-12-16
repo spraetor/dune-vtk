@@ -49,10 +49,12 @@ namespace Dune
 
     void insertPiecesImpl (std::vector<std::string> const& pieces)
     {
-      if (this->rank() == 0) {
+      if (this->comm().rank() == 0) {
         VtkReader<Grid, Self> pieceReader(*this);
-        for (std::string const& piece : pieces)
-          pieceReader.readFromFile(piece);
+        for (std::string const& piece : pieces) {
+          pieceReader.readFromFile(piece, false);
+          pieceReader.createGrid(false);
+        }
 
         DiscontinuousGridCreator<Grid> creator(this->factory());
         creator.insertVertices(points_, {});

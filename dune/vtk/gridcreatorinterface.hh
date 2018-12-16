@@ -21,18 +21,7 @@ public:
 public:
   GridCreatorInterface (GridFactory<Grid>& factory)
     : factory_(&factory)
-  {
-#if DUNE_VERSION_LT(DUNE_GRID,2,7)
-  // old GridFactory implementation does not provide access to its collective communication
-  #if HAVE_MPI
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
-    MPI_Comm_size(MPI_COMM_WORLD, &numRanks_);
-  #endif
-#else
-    rank_ = factory.comm().rank();
-    numRanks_ = factory.comm().size();
-#endif
-  }
+  {}
 
   /// Insert all points as vertices into the factory
   void insertVertices (std::vector<GlobalCoordinate> const& points,
@@ -61,16 +50,10 @@ public:
     return *factory_;
   }
 
-  /// Return the MPI_Comm_rank of the factory, (or of MPI_COMM_WORLD)
-  int rank () const
+  /// Return the mpi collective communicator
+  auto comm () const
   {
-    return rank_;
-  }
-
-  /// Return the MPI_Comm_size of the factory, (or of MPI_COMM_WORLD)
-  int size () const
-  {
-    return numRanks_;
+    return MPIHelper::getCollectiveCommunication();
   }
 
 protected: // cast to derived type
@@ -107,8 +90,6 @@ public: // default implementations
 
 protected:
   GridFactory<Grid>* factory_;
-  int rank_ = 0;
-  int numRanks_ = 1;
 };
 
 } // end namespace Dune
