@@ -70,7 +70,6 @@ public:
     std::vector<std::uint64_t> data;
     data.reserve(numPoints_);
     GlobalIndexSet<GridView> globalIndexSet(gridView_, dim);
-    auto const& indexSet = gridView_.indexSet();
     for (auto const& vertex : vertices(gridView_, partition)) {
       data.emplace_back(globalIndexSet.index(vertex));
     }
