@@ -11,11 +11,13 @@ template <class GridView>
 class YaspDataCollector
     : public StructuredDataCollectorInterface<GridView, YaspDataCollector<GridView>>
 {
-  enum { dim = GridView::dimension };
-
   using Self = YaspDataCollector;
   using Super = StructuredDataCollectorInterface<GridView, Self>;
   using ctype = typename GridView::ctype;
+
+public:
+  using Super::dim;
+  using Super::partition;
 
 public:
   YaspDataCollector (GridView const& gridView)

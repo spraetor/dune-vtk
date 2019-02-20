@@ -38,7 +38,7 @@ static TestCases test_cases = {
 template <class GridView>
 void write (std::string prefix, GridView const& gridView)
 {
-#if DUNE_VERSION_LT(DUNE_FUNCTIONS, 2, 7)
+#if DUNE_VERSION_LT(DUNE_FUNCTIONS, 2, 6)
   using namespace BasisBuilder;
 #else
   using namespace BasisFactory;

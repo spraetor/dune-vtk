@@ -37,6 +37,7 @@ void VtkUnstructuredGridWriter<GV,DC>
   // Write element connectivity, types and offsets
   out << "<Cells>\n";
   writeCells(out, offsets);
+  writePointIds(out, offsets);
   out << "</Cells>\n";
 
   // Write data associated with grid points
@@ -134,14 +135,17 @@ void VtkUnstructuredGridWriter<GV,DC>
 
   // Write point coordinates
   out << "<Points>\n";
-  for (std::size_t i = 0; i < timesteps.size(); ++i)
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
     this->writePoints(out, offsets[i], i);
+  }
   out << "</Points>\n";
 
   // Write element connectivity, types and offsets
   out << "<Cells>\n";
-  for (std::size_t i = 0; i < timesteps.size(); ++i)
+  for (std::size_t i = 0; i < timesteps.size(); ++i) {
     writeCells(out, offsets[i], i);
+    writePointIds(out, offsets[i], i);
+  }
   out << "</Cells>\n";
 
   const std::size_t shift = offsets[0].size(); // number of blocks to write the grid
@@ -329,6 +333,34 @@ void VtkUnstructuredGridWriter<GV,DC>
   }
 }
 
+template <class GV, class DC>
+void VtkUnstructuredGridWriter<GV,DC>
+  ::writePointIds (std::ofstream& out,
+                   std::vector<pos_type>& offsets,
+                   Std::optional<std::size_t> timestep) const
+{
+  auto ids = dataCollector_.pointIds();
+  if (ids.empty())
+    return;
+
+  if (format_ == Vtk::ASCII) {
+    out << "<DataArray type=\"UInt64\" Name=\"global_point_ids\" format=\"ascii\"";
+    if (timestep)
+      out << " TimeStep=\"" << *timestep << "\"";
+    out << ">\n";
+    this->writeValuesAscii(out, ids);
+    out << "</DataArray>\n";
+  }
+  else { // Vtk::APPENDED format
+    out << "<DataArray type=\"UInt64\" Name=\"global_point_ids\" format=\"appended\"";
+    if (timestep)
+      out << " TimeStep=\"" << *timestep << "\"";
+    out << " offset=";
+    offsets.push_back(out.tellp());
+    out << std::string(std::numeric_limits<std::uint64_t>::digits10 + 2, ' ');
+    out << "/>\n";
+  }
+}
 
 template <class GV, class DC>
 void VtkUnstructuredGridWriter<GV,DC>
@@ -346,6 +378,10 @@ void VtkUnstructuredGridWriter<GV,DC>
   blocks.push_back(this->writeValuesAppended(out, cells.connectivity));
   blocks.push_back(this->writeValuesAppended(out, cells.offsets));
   blocks.push_back(this->writeValuesAppended(out, cells.types));
+
+  auto ids = dataCollector_.pointIds();
+  if (!ids.empty())
+    blocks.push_back(this->writeValuesAppended(out, ids));
 }
 
 } // end namespace Dune

@@ -3,20 +3,23 @@
 #include <iosfwd>
 #include <map>
 
-#include "filereader.hh"
-#include "gridcreator.hh"
-#include "vtktypes.hh"
+#include <dune/vtk/filereader.hh>
+#include <dune/vtk/forward.hh>
+#include <dune/vtk/vtktypes.hh>
+
+// default GridCreator
+#include <dune/vtk/gridcreators/continuousgridcreator.hh>
 
 namespace Dune
 {
-  /// File-Reader for Vtk .vtu files
+  /// File-Reader for Vtk unstructured .vtu files
   /**
    * Reads .vtu files and constructs a grid from the cells stored in the file
    * Additionally, stored data can be read.
    *
    * Assumption on the file structure: Each XML tag must be on a separate line.
    **/
-  template <class Grid, class GridCreator = DefaultGridCreator>
+  template <class Grid, class GridCreator>
   class VtkReader
       : public FileReader<Grid, VtkReader<Grid, GridCreator>>
   {
@@ -37,19 +40,41 @@ namespace Dune
     using GlobalCoordinate = typename Entity::Geometry::GlobalCoordinate;
 
   public:
-    /// Constructor. Stores a pointer to the GridFactory.
-    VtkReader (GridFactory<Grid>& factory)
-      : factory_(&factory)
+    /// Constructor. Creates a new GridCreator with the passed factory
+    template <class... Args>
+    explicit VtkReader (Args&&... args)
+      : creatorStorage_(std::make_unique<GridCreator>(std::forward<Args>(args)...))
+      , creator_(*creatorStorage_)
     {}
 
-    /// Read the grid from file with `filename` into the GridFactory `factory`
-    void readFromFile (std::string const& filename);
+    /// Constructor. Stores a references to the passed creator
+    VtkReader (GridCreator& creator)
+      : creator_(creator)
+    {}
+
+    /// Read the grid from file with `filename` into the GridFactory \ref factory_
+    void readFromFile (std::string const& filename, bool create = true);
+
+    /// Read the grid from and input stream into the GridFactory \ref factory_
+    void readSerialFileFromStream (std::ifstream& input, bool create = true);
+
+    /// Read the grid from and input stream into the GridFactory \ref factory_
+    void readParallelFileFromStream (std::ifstream& input, int rank, int size, bool create = true);
 
     /// Implementation of \ref FileReader interface
     static void readFactoryImpl (GridFactory<Grid>& factory, std::string const& filename)
     {
       VtkReader reader{factory};
       reader.readFromFile(filename);
+    }
+
+    /// Construct a grid using the GridCreator
+    void createGrid(bool insertPieces = true);
+
+    /// Return the filenames of parallel pieces
+    std::vector<std::string> const& pieces () const
+    {
+      return pieces_;
     }
 
   private:
@@ -69,7 +94,7 @@ namespace Dune
     }
 
     // Read vertex coordinates from `input` stream and store in into `factory`
-    Sections readPoints (std::ifstream& input);
+    Sections readPoints (std::ifstream& input, std::string name);
 
     template <class T>
     void readPointsAppended (std::ifstream& input);
@@ -101,32 +126,40 @@ namespace Dune
     // Read attributes from current xml tag
     std::map<std::string, std::string> parseXml(std::string const& line, bool& closed);
 
-    // Construct a grid using the GridFactory `factory` and the read vectors
-    // \ref vec_points, \ref vec_types, \ref vec_offsets, and \ref vec_connectivity,
-    // by passing to \ref GridCreator.
-    void createGrid() const;
+    // clear all vectors
+    void clear ();
+
+    auto comm () const
+    {
+      return MPIHelper::getCollectiveCommunication();
+    }
 
   private:
-    GridFactory<Grid>* factory_;
+    std::unique_ptr<GridCreator> creatorStorage_ = nullptr;
+    GridCreator& creator_;
 
     /// Data format, i.e. ASCII, BINARY or COMPRESSED. Read from xml attributes.
     Vtk::FormatTypes format_;
 
     // Temporary data to construct the grid elements
     std::vector<GlobalCoordinate> vec_points;
-    std::vector<std::uint8_t> vec_types; //< VTK cell type ID
-    std::vector<std::int64_t> vec_offsets; //< offset of vertices of cell
+    std::vector<std::uint64_t> vec_point_ids;   //< Global unique vertex ID
+    std::vector<std::uint8_t> vec_types;        //< VTK cell type ID
+    std::vector<std::int64_t> vec_offsets;      //< offset of vertices of cell
     std::vector<std::int64_t> vec_connectivity; //< vertex indices of cell
 
-    std::size_t numberOfCells_; //< Number of cells in the grid
-    std::size_t numberOfPoints_; // Number of vertices in the grid
+    std::size_t numberOfCells_ = 0;   //< Number of cells in the grid
+    std::size_t numberOfPoints_ = 0;  //< Number of vertices in the grid
 
     // offset information for appended data
     // map Name -> {DataType,NumberOfComponents,Offset}
     std::map<std::string, DataArrayAttributes> dataArray_;
 
+    // vector of filenames of parallel pieces
+    std::vector<std::string> pieces_;
+
     /// Offset of beginning of appended data
-    std::uint64_t offset0_;
+    std::uint64_t offset0_ = 0;
   };
 
 } // end namespace Dune

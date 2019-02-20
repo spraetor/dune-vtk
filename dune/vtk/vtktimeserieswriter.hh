@@ -5,6 +5,7 @@
 #include <vector>
 
 #include <dune/vtk/filewriter.hh>
+#include <dune/vtk/forward.hh>
 #include <dune/vtk/vtktypes.hh>
 #include <dune/vtk/utility/filesystem.hh>
 #include <dune/vtk/utility/uid.hh>

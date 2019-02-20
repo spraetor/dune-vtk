@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 
+#include <dune/vtk/forward.hh>
+
 namespace Dune
 {
   template <class Grid, class FilerReaderImp>

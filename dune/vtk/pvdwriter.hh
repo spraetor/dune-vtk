@@ -7,6 +7,7 @@
 
 #include <dune/vtk/vtktypes.hh>
 #include <dune/vtk/filewriter.hh>
+#include <dune/vtk/forward.hh>
 
 namespace Dune
 {

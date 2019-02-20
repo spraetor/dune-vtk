@@ -5,6 +5,7 @@
 #include <map>
 
 #include <dune/vtk/filewriter.hh>
+#include <dune/vtk/forward.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 #include <dune/vtk/datacollectors/structureddatacollector.hh>
@@ -18,7 +19,7 @@ namespace Dune
    * Requirement:
    * - DataCollector must be a model of \ref StructuredDataCollector
    **/
-  template <class GridView, class DataCollector = StructuredDataCollector<GridView>>
+  template <class GridView, class DataCollector>
   class VtkStructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
   {

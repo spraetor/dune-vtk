@@ -17,8 +17,13 @@
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
+#if HAVE_DUNE_ALUGRID
+#include <dune/alugrid/grid.hh>
+#endif
+
 #include <dune/vtk/vtkreader.hh>
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
+#include <dune/vtk/gridcreators/continuousgridcreator.hh>
 
 using namespace Dune;
 
@@ -27,6 +32,10 @@ bool compare_files (std::string const& fn1, std::string const& fn2)
 {
   std::ifstream in1(fn1, std::ios::binary);
   std::ifstream in2(fn2, std::ios::binary);
+  if (!in1 || !in2) {
+    std::cout << "can not find file " << fn1 << " or file " << fn2 << "\n";
+    return false;
+  }
 
   std::ifstream::pos_type size1 = in1.seekg(0, std::ifstream::end).tellg();
   in1.seekg(0, std::ifstream::beg);
@@ -66,6 +75,13 @@ static TestCases test_cases = {
   {"zlib64", Vtk::COMPRESSED, Vtk::FLOAT64},
 };
 
+template <class Test>
+void compare (Test& test, filesystem::path const& dir, filesystem::path const& name)
+{
+  test.check(compare_files(dir.string() + '/' + name.string() + ".vtu",
+                           dir.string() + '/' + name.string() + "_2.vtu"));
+}
+
 template <class GridView>
 void writer_test (GridView const& gridView)
 {
@@ -76,15 +92,35 @@ void writer_test (GridView const& gridView)
 }
 
 template <class Grid, class Test>
-void reader_test (Test& test)
+void reader_test (MPIHelper& mpi, Test& test)
 {
+  std::string ext = ".vtu";
   for (auto const& test_case : test_cases) {
-    auto grid = VtkReader<Grid>::read("reader_writer_test_" + std::get<0>(test_case) + ".vtu");
-    VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
-      std::get<1>(test_case), std::get<2>(test_case));
-    vtkWriter.write("reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
-    test.check(compare_files("reader_writer_test_" + std::get<0>(test_case) + ".vtu",
-                             "reader_writer_test_" + std::get<0>(test_case) + "_2.vtu"));
+    std::vector<std::string> pieces1, pieces2;
+
+    {
+      GridFactory<Grid> factory;
+      VtkReader<Grid> reader{factory};
+      reader.readFromFile("reader_writer_test_" + std::get<0>(test_case) + ext);
+
+      std::unique_ptr<Grid> grid{factory.createGrid()};
+      pieces1 = reader.pieces();
+
+      VtkUnstructuredGridWriter<typename Grid::LeafGridView> vtkWriter(grid->leafGridView(),
+        std::get<1>(test_case), std::get<2>(test_case));
+      vtkWriter.write("reader_writer_test_" + std::get<0>(test_case) + "_2.vtu");
+    }
+
+    {
+      GridFactory<Grid> factory2;
+      VtkReader<Grid> reader2{factory2};
+      reader2.readFromFile("reader_writer_test_" + std::get<0>(test_case) + "_2" + ext, false);
+      pieces2 = reader2.pieces();
+    }
+
+    test.check(pieces1.size() == pieces2.size(), "pieces1.size == pieces2.size");
+    for (std::size_t i = 0; i < pieces1.size(); ++i)
+      test.check(compare_files(pieces1[i], pieces2[i]));
   }
 }
 
@@ -94,13 +130,17 @@ using int_ = std::integral_constant<int,I>;
 
 int main (int argc, char** argv)
 {
-  Dune::MPIHelper::instance(argc, argv);
+  auto& mpi = Dune::MPIHelper::instance(argc, argv);
+  if (mpi.size() > 1) {
+    std::cout << "Parallel VtkReader not yet supported\n";
+    return 0;
+  }
 
   TestSuite test{};
 
-#ifdef HAVE_UG
+#if HAVE_UG
   // Test VtkWriter for UGGrid
-  Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [&test](auto dim)
+  Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [&test,&mpi](auto dim)
   {
     using GridType = UGGrid<dim.value>;
     {
@@ -108,11 +148,31 @@ int main (int argc, char** argv)
       FieldVector<double,dim.value> upperRight; upperRight = 1.0;
       auto numElements = filledArray<dim.value,unsigned int>(4);
       auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
+      gridPtr->loadBalance();
 
       writer_test(gridPtr->leafGridView());
     }
 
-    reader_test<GridType>(test);
+    reader_test<GridType>(mpi,test);
+  });
+#endif
+
+#if DUNE_VERSION_LT(DUNE_GRID,2,7) && HAVE_DUNE_ALUGRID
+  // Test VtkWriter for ALUGrid. Currently the 2.7 branch is not working.
+  Hybrid::forEach(std::make_tuple(int_<2>{}, int_<3>{}), [&test,&mpi](auto dim)
+  {
+    using GridType = Dune::ALUGrid<dim.value, dim.value, Dune::simplex, Dune::conforming>;
+    {
+      FieldVector<double,dim.value> lowerLeft; lowerLeft = 0.0;
+      FieldVector<double,dim.value> upperRight; upperRight = 1.0;
+      auto numElements = filledArray<dim.value,unsigned int>(4);
+      auto gridPtr = StructuredGridFactory<GridType>::createSimplexGrid(lowerLeft, upperRight, numElements);
+      gridPtr->loadBalance();
+
+      writer_test(gridPtr->leafGridView());
+    }
+
+    reader_test<GridType>(mpi,test);
   });
 #endif
 
@@ -121,7 +181,7 @@ int main (int argc, char** argv)
   {
     using GridType = YaspGrid<dim.value>;
     FieldVector<double,dim.value> upperRight; upperRight = 1.0;
-    auto numElements = filledArray<dim.value,int>(4);
+    auto numElements = filledArray<dim.value,int>(8);
     GridType grid(upperRight, numElements);
     writer_test(grid.leafGridView());
   });

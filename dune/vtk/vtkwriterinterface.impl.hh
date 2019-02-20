@@ -39,8 +39,8 @@ void VtkWriterInterface<GV,DC>
   std::string parallel_fn = data_dir.string() + '/' + name.string();
   std::string rel_fn = rel_dir.string() + '/' + name.string();
 
-  if (numRanks_ > 1)
-    serial_fn += "_p" + std::to_string(rank_);
+  if (comm().size() > 1)
+    serial_fn += "_p" + std::to_string(comm().rank());
 
   { // write serial file
     std::ofstream serial_out(serial_fn + "." + fileExtension(), std::ios_base::ate | std::ios::binary);
@@ -54,7 +54,7 @@ void VtkWriterInterface<GV,DC>
     writeSerialFile(serial_out);
   }
 
-  if (numRanks_ > 1 && rank_ == 0) {
+  if (comm().size() > 1 && comm().rank() == 0) {
     // write parallel file
     std::ofstream parallel_out(parallel_fn + ".p" + fileExtension(), std::ios_base::ate | std::ios::binary);
     assert(parallel_out.is_open());
@@ -64,7 +64,7 @@ void VtkWriterInterface<GV,DC>
       ? std::numeric_limits<float>::digits10+2
       : std::numeric_limits<double>::digits10+2);
 
-    writeParallelFile(parallel_out, rel_fn, numRanks_);
+    writeParallelFile(parallel_out, rel_fn, comm().size());
   }
 }
 

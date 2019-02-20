@@ -16,6 +16,8 @@
 #include <dune/grid/utility/structuredgridfactory.hh>
 
 #include <dune/vtk/vtkreader.hh>
+#include <dune/vtk/gridcreators/continuousgridcreator.hh>
+#include <dune/vtk/gridcreators/discontinuousgridcreator.hh>
 #include <dune/vtk/writers/vtkunstructuredgridwriter.hh>
 
 using namespace Dune;
@@ -72,7 +74,7 @@ int main(int argc, char** argv)
   }
 
   {
-    auto gridPtr = VtkReader<GridType,ConnectedGridCreator>::read("test_ascii_float32.vtu");
+    auto gridPtr = VtkReader<GridType,DiscontinuousGridCreator<GridType>>::read("test_ascii_float32.vtu");
     auto& grid = *gridPtr;
 
     VtkUnstructuredGridWriter<GridView> vtkWriter(grid.leafGridView(), Vtk::ASCII);

@@ -8,7 +8,6 @@ install(FILES
   defaultvtkfunction.hh
   filereader.hh
   filewriter.hh
-  gridcreator.hh
   legacyvtkfunction.hh
   pvdwriter.hh
   pvdwriter.impl.hh
@@ -26,5 +25,6 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dune/vtkwriter)
 
 add_subdirectory(datacollectors)
+add_subdirectory(gridcreators)
 add_subdirectory(utility)
 add_subdirectory(writers)

@@ -15,11 +15,13 @@ template <class GridView>
 class SPDataCollector
     : public StructuredDataCollectorInterface<GridView, SPDataCollector<GridView>>
 {
-  enum { dim = GridView::dimension };
-
   using Self = SPDataCollector;
   using Super = StructuredDataCollectorInterface<GridView, Self>;
   using ctype = typename GridView::ctype;
+
+public:
+  using Super::dim;
+  using Super::partition;
 
 public:
   SPDataCollector (GridView const& gridView)

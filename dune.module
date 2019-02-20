@@ -4,7 +4,7 @@
 
 #Name of the module
 Module: dune-vtk
-Version: 0.1
+Version: 0.2
 Maintainer: simon.praetorius@tu-dresden.de
 #depending on
 Depends: dune-common (>= 2.6) dune-geometry (>= 2.6) dune-grid

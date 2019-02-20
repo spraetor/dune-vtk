@@ -25,15 +25,15 @@ void PvdWriter<W>
 
   std::string ext = "." + vtkWriter_.getFileExtension();
 
-  int rank = vtkWriter_.rank_;
-  int numRanks = vtkWriter_.numRanks_;
-  if (numRanks > 1)
+  int commRank = vtkWriter_.comm().rank();
+  int commSize = vtkWriter_.comm().size();
+  if (commSize > 1)
     ext = ".p" + vtkWriter_.getFileExtension();
 
   timesteps_.emplace_back(time, rel_fn + ext);
   vtkWriter_.write(seq_fn + ext);
 
-  if (rank == 0 && writeCollection) {
+  if (commRank == 0 && writeCollection) {
     std::ofstream out(pvd_fn + ".pvd", std::ios_base::ate | std::ios::binary);
     assert(out.is_open());
 
@@ -56,8 +56,8 @@ void PvdWriter<W>
   p.remove_filename();
   p /= name.string();
 
-  int rank = vtkWriter_.rank_;
-  if (rank == 0) {
+  int commRank = vtkWriter_.comm().rank();
+  if (commRank == 0) {
     std::ofstream out(p.string() + ".pvd", std::ios_base::ate | std::ios::binary);
     assert(out.is_open());
 

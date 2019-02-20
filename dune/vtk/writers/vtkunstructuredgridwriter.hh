@@ -5,6 +5,7 @@
 #include <map>
 
 #include <dune/vtk/filewriter.hh>
+#include <dune/vtk/forward.hh>
 #include <dune/vtk/vtkfunction.hh>
 #include <dune/vtk/vtktypes.hh>
 #include <dune/vtk/datacollectors/continuousdatacollector.hh>
@@ -18,7 +19,7 @@ namespace Dune
    * Requirement:
    * - DataCollector must be a model of \ref DataCollector
    **/
-  template <class GridView, class DataCollector = ContinuousDataCollector<GridView>>
+  template <class GridView, class DataCollector>
   class VtkUnstructuredGridWriter
       : public VtkWriterInterface<GridView, DataCollector>
   {
@@ -75,9 +76,13 @@ namespace Dune
     // Write the element connectivity to the output stream `out`. In case
     // of binary format, stores the streampos of XML attributes "offset" in the
     // vector `offsets`.
-    void writeCells (std::ofstream& oust,
+    void writeCells (std::ofstream& out,
                      std::vector<pos_type>& offsets,
                      Std::optional<std::size_t> timestep = {}) const;
+
+    void writePointIds (std::ofstream& out,
+                        std::vector<pos_type>& offsets,
+                        Std::optional<std::size_t> timestep = {}) const;
 
   private:
     using Super::dataCollector_;

@@ -12,6 +12,7 @@
 
 #include <dune/grid/geometrygrid.hh>
 #include <dune/grid/yaspgrid.hh>
+#include <dune/vtk/forward.hh>
 #include <dune/vtk/datacollectors/yaspdatacollector.hh>
 
 namespace Dune

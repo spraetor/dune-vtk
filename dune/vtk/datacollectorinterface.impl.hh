@@ -6,20 +6,20 @@
 
 namespace Dune {
 
-template <class GridView, class Derived>
+template <class GV, class D, class P>
   template <class T, class VtkFunction>
-std::vector<T> DataCollectorInterface<GridView, Derived>
+std::vector<T> DataCollectorInterface<GV,D,P>
   ::cellDataImpl (VtkFunction const& fct) const
 {
-  std::vector<T> data(gridView_.size(0) * fct.ncomps());
-  MultipleCodimMultipleGeomTypeMapper<GridView> mapper(gridView_, mcmgElementLayout());
+  std::vector<T> data;
+  data.reserve(this->numCells() * fct.ncomps());
+
   auto localFct = localFunction(fct);
-  for (auto const& e : elements(gridView_, Partitions::all)) {
+  for (auto const& e : elements(gridView_, partition)) {
     localFct.bind(e);
-    auto refElem = referenceElement<T,GridView::dimension>(e.type());
-    std::size_t idx = fct.ncomps() * mapper.index(e);
+    auto refElem = referenceElement<T,dim>(e.type());
     for (int comp = 0; comp < fct.ncomps(); ++comp)
-      data[idx + comp] = T(localFct.evaluate(comp, refElem.position(0,0)));
+      data.emplace_back(localFct.evaluate(comp, refElem.position(0,0)));
     localFct.unbind();
   }
   return data;
