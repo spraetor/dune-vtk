@@ -18,8 +18,6 @@ namespace Dune
   {
     using Self = PvdWriter;
 
-    // static_assert(IsVtkWriter<VtkWriter>::value, "Writer must implement the VtkWriterInterface.");
-
   public:
     /// Constructor, creates a VtkWriter with constructor arguments forwarded
     template <class... Args, disableCopyMove<Self,Args...> = 0>
@@ -30,7 +28,7 @@ namespace Dune
       datatype_ = vtkWriter_.getDatatype();
     }
 
-    /// Write the attached data to the file
+    /// \brief Write the attached data to the file
     /**
      * Create timestep files for the data associated to the current timestep `time`.
      *
@@ -44,8 +42,8 @@ namespace Dune
     void writeTimestep (double time, std::string const& fn, Std::optional<std::string> dir = {},
                         bool writeCollection = true) const;
 
-    /// Writes collection of timesteps to .pvd file.
-    // NOTE: requires an aforging call to \ref writeTimestep
+    /// \brief Writes collection of timesteps to .pvd file.
+    // NOTE: requires an aforgoing call to \ref writeTimestep
     /**
      * \param fn  The filename of the PVD file. May contain directory and any filename extension.
      * \param dir (Ignored) Timestep files are already written and their filenames are

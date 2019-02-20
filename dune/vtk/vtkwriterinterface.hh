@@ -14,6 +14,10 @@
 namespace Dune
 {
   /// Interface for file writers for the Vtk XML file formats
+  /**
+   * \tparam GridView       Model of Dune::GridView
+   * \tparam DataCollector  Model of \ref DataCollectorInterface
+   **/
   template <class GridView, class DataCollector>
   class VtkWriterInterface
       : public FileWriter
@@ -34,7 +38,16 @@ namespace Dune
     };
 
   public:
-    /// Constructor, stores the gridView
+    /// \brief Constructor, passes the gridView to the DataCollector
+    /**
+     * Creates a new VtkWriterInterface for the provided GridView. Initializes a
+     * DataCollector that is used to collect point coordinates, cell connectivity and
+     * data values.
+     *
+     * \param gridView  Implementation of Dune::GridView
+     * \param format    Format of the VTK file, either Vtk::BINARY, Vtk::ASCII, or Vtk::COMPRESSED
+     * \param datatype  Output datatype used for coordinates and other global floating point values
+     **/
     VtkWriterInterface (GridView const& gridView,
                         Vtk::FormatTypes format = Vtk::BINARY,
                         Vtk::DataTypes datatype = Vtk::FLOAT32)
@@ -50,14 +63,21 @@ namespace Dune
 #endif
     }
 
-    /// Write the attached data to the file
+    /// \brief Write the attached data to the file
     /**
      * \param fn   Filename of the VTK file. May contain a directory and any file extension.
-     * \param dir  The optional parameter specifies the directory of the partition files.
+     * \param dir  The optional parameter specifies the directory of the partition files for parallel writes.
      **/
     virtual void write (std::string const& fn, Std::optional<std::string> dir = {}) const override;
 
-    /// Attach point data to the writer, \see VtkFunction for possible arguments
+    /// \brief Attach point data to the writer
+    /**
+     * Attach a global function to the writer that will be evaluated at grid points
+     * (vertices and higher order points). The global function must be
+     * assignable to the function wrapper \ref VtkFunction. Additional argument
+     * for output datatype and number of components can be bassed. See \ref VtkFunction
+     * Constructor for possible arguments.
+     **/
     template <class Function, class... Args>
     VtkWriterInterface& addPointData (Function const& fct, Args&&... args)
     {
@@ -65,7 +85,13 @@ namespace Dune
       return *this;
     }
 
-    /// Attach cell data to the writer, \see VtkFunction for possible arguments
+    /// \brief Attach cell data to the writer
+    /**
+     * Attach a global function to the writer that will be evaluated at cell centers.
+     * The global function must be assignable to the function wrapper \ref VtkFunction.
+     * Additional argument for output datatype and number of components can be bassed.
+     * See \ref VtkFunction Constructor for possible arguments.
+     **/
     template <class Function, class... Args>
     VtkWriterInterface& addCellData (Function const& fct, Args&&... args)
     {
@@ -77,7 +103,7 @@ namespace Dune
     /// Write a serial VTK file in Unstructured format
     virtual void writeSerialFile (std::ofstream& out) const = 0;
 
-    /// Write a parallel VTK file `pfilename.pvtu` in Unstructured format,
+    /// Write a parallel VTK file `pfilename.pvtx` in XML format,
     /// with `size` the number of pieces and serial files given by `pfilename_p[i].vtu`
     /// for [i] in [0,...,size).
     virtual void writeParallelFile (std::ofstream& out, std::string const& pfilename, int size) const = 0;
@@ -90,19 +116,19 @@ namespace Dune
 
   protected:
     // Write the point or cell values given by the grid function `fct` to the
-    // output stream `out`. In case of binary format, stores the streampos of XML
-    // attributes "offset" in the vector `offsets`.
+    // output stream `out`. In case of binary format, append the streampos of XML
+    // attributes "offset" to the vector `offsets`.
     void writeData (std::ofstream& out,
                     std::vector<pos_type>& offsets,
                     VtkFunction const& fct,
                     PositionTypes type,
                     Std::optional<std::size_t> timestep = {}) const;
 
-    // Write points-data and cell-data in raw/compressed format to output stream
+    // Write point-data and cell-data in raw/compressed format to output stream
     void writeDataAppended (std::ofstream& out, std::vector<std::uint64_t>& blocks) const;
 
     // Write the coordinates of the vertices to the output stream `out`. In case
-    // of binary format, stores the streampos of XML attributes "offset" in the
+    // of binary format, appends the streampos of XML attributes "offset" to the
     // vector `offsets`.
     void writePoints (std::ofstream& out,
                       std::vector<pos_type>& offsets,
@@ -116,9 +142,12 @@ namespace Dune
     template <class T>
     std::uint64_t writeValuesAppended (std::ofstream& out, std::vector<T> const& values) const;
 
+    // Write the `values` in a space and newline separated list of ascii representations.
+    // The precision is controlled by the datatype and numerical_limits::digits10.
     template <class T>
     void writeValuesAscii (std::ofstream& out, std::vector<T> const& values) const;
 
+    // Write the XML file header of a VTK file `<VTKFile ...>`
     void writeHeader (std::ofstream& out, std::string const& type) const;
 
     /// Return PointData/CellData attributes for the name of the first scalar/vector/tensor DataArray
@@ -137,16 +166,19 @@ namespace Dune
       return fileExtension();
     }
 
+    // Returns the VTK file format initialized in the constructor
     Vtk::FormatTypes getFormat () const
     {
       return format_;
     }
 
+    // Returns the global datatype used for coordinates and other global float values
     Vtk::DataTypes getDatatype () const
     {
       return datatype_;
     }
 
+    // Return the global MPI communicator.
     auto comm () const
     {
       return MPIHelper::getCollectiveCommunication();

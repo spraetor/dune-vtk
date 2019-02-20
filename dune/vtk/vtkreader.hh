@@ -52,14 +52,18 @@ namespace Dune
       : creator_(creator)
     {}
 
+    // disable copy and move operations
+    VtkReader(VtkReader const&) = delete;
+    VtkReader(VtkReader&&) = delete;
+    VtkReader& operator=(VtkReader const&) = delete;
+    VtkReader& operator=(VtkReader&&) = delete;
+
     /// Read the grid from file with `filename` into the GridFactory \ref factory_
+    /**
+     * \param filename  The name of the input file
+     * \param create    If `false`, only fill internal data structures, if `true`, also create the grid. [true]
+     **/
     void readFromFile (std::string const& filename, bool create = true);
-
-    /// Read the grid from and input stream into the GridFactory \ref factory_
-    void readSerialFileFromStream (std::ifstream& input, bool create = true);
-
-    /// Read the grid from and input stream into the GridFactory \ref factory_
-    void readParallelFileFromStream (std::ifstream& input, int rank, int size, bool create = true);
 
     /// Implementation of \ref FileReader interface
     static void readFactoryImpl (GridFactory<Grid>& factory, std::string const& filename)
@@ -68,8 +72,28 @@ namespace Dune
       reader.readFromFile(filename);
     }
 
+    /// Advanced read methods
+    /// @{
+
+    /// Read the grid from an input stream, referring to a .vtu file, into the GridFactory \ref factory_
+    /**
+     * \param input   A STL input stream to read the VTK file from.
+     * \param create  If `false`, only fill internal data structures, if `true`, also create the grid. [true]
+     **/
+    void readSerialFileFromStream (std::ifstream& input, bool create = true);
+
+    /// Read the grid from and input stream, referring to a .pvtu file, into the GridFactory \ref factory_
+    /**
+     * \param input   A STL input stream to read the VTK file from.
+     * \param create  If `false`, only fill internal data structures, if `true`, also create the grid. [true]
+     **/
+    void readParallelFileFromStream (std::ifstream& input, int rank, int size, bool create = true);
+
     /// Construct a grid using the GridCreator
+    // NOTE: requires the internal data structures to be filled by an aforgoing call to readFromFile
     void createGrid(bool insertPieces = true);
+
+    /// @}
 
     /// Return the filenames of parallel pieces
     std::vector<std::string> const& pieces () const

@@ -33,7 +33,7 @@ namespace Dune
    * are provided, like YaspGrid and GeometrGrid.
    *
    * Note: Uses the default data-collector. If you want to choose a special data-collector, use
-   * the concrete write Implementation instead.
+   * the concrete writer Implementation instead. \see VtkWriterInterface
    **/
   template <class GridView>
   using VtkWriter = typename Impl::VtkWriterImpl<GridView, typename GridView::Grid>::type;
