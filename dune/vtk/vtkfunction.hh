@@ -35,6 +35,7 @@ namespace Dune
   constexpr int sizeOf () { return Impl::SizeImpl<std::decay_t<T>>::value; }
 
 
+  /// Wrapper class for functions allowing local evaluations.
   template <class GridView>
   class VtkFunction
   {
@@ -48,6 +49,10 @@ namespace Dune
 
   public:
     /// Constructor VtkFunction from legacy VTKFunction
+    /**
+     * \param fct   The VTKFunction to wrap
+     * \param type  The VTK datatype how to write the function values to the output [Vtk::FLOAT64]
+     **/
     VtkFunction (std::shared_ptr<VTKFunction<GridView> const> const& fct,
                  Std::optional<Vtk::DataTypes> type = {})
       : localFct_(fct)

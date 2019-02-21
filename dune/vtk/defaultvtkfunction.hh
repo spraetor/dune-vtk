@@ -25,21 +25,25 @@ namespace Dune
     using Range = std::decay_t<decltype(std::declval<F>()(std::declval<D>()))>;
 
   public:
+    /// Constructor. Stores a copy of the passed `localFct` in a local variable.
     template <class LocalFct, disableCopyMove<Self, LocalFct> = 0>
     LocalFunctionWrapper (LocalFct&& localFct)
       : localFct_(std::forward<LocalFct>(localFct))
     {}
 
+    /// Bind the LocalFunction to the Entity
     virtual void bind (Entity const& entity) override
     {
       localFct_.bind(entity);
     }
 
+    /// Unbind the LocalFunction from the Entity
     virtual void unbind () override
     {
       localFct_.unbind();
     }
 
+    /// Evaluate the LocalFunction in LocalCoordinates
     virtual double evaluate (int comp, LocalCoordinate const& xi) const override
     {
       return evaluateImpl(comp, localFct_(xi));

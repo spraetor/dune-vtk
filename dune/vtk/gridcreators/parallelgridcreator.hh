@@ -13,6 +13,7 @@
 
 namespace Dune
 {
+  // create a distributed grid in parallel. Currently only supported by ALUGrid
   template <class Grid>
   struct ParallelGridCreator
       : public DerivedGridCreator<ContinuousGridCreator<Grid>, ParallelGridCreator<Grid>>

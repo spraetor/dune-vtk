@@ -67,7 +67,7 @@ namespace Dune
                         bool writeCollection = true) const;
 
     /// Writes all timesteps to single timeseries file.
-    // NOTE: requires an aforging call to \ref writeTimestep
+    // NOTE: requires an aforgoing call to \ref writeTimestep
     /**
      * Create a timeseries file with all timesteps written by \ref writeTimestep.
      *
