@@ -35,8 +35,8 @@ void VtkWriterInterface<GV,DC>
   filesystem::path data_dir = dir ? filesystem::path(*dir) : fn_dir;
   filesystem::path rel_dir = filesystem::relative(data_dir, fn_dir);
 
-  std::string serial_fn = fn_dir.string() + '/' + name.string();
-  std::string parallel_fn = data_dir.string() + '/' + name.string();
+  std::string serial_fn = data_dir.string() + '/' + name.string();
+  std::string parallel_fn = fn_dir.string() + '/' + name.string();
   std::string rel_fn = rel_dir.string() + '/' + name.string();
 
   if (comm().size() > 1)
