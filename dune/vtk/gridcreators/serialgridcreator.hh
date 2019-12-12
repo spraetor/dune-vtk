@@ -11,6 +11,7 @@
 
 namespace Dune
 {
+  // create a distributed grid on rank 0. Needs to be load balanced afterwards.
   template <class Grid>
   struct SerialGridCreator
       : public GridCreatorInterface<Grid, SerialGridCreator<Grid>>

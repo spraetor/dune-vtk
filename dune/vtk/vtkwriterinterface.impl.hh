@@ -162,10 +162,10 @@ void VtkWriterInterface<GV,DC>
 namespace Impl {
 
   template <class T, std::enable_if_t<(sizeof(T)>1), int> = 0>
-  T const& printable (T const& t) { return t; }
+  inline T const& printable (T const& t) { return t; }
 
-  std::int16_t printable (std::int8_t c) { return std::int16_t(c); }
-  std::uint16_t printable (std::uint8_t c) { return std::uint16_t(c); }
+  inline std::int16_t printable (std::int8_t c) { return std::int16_t(c); }
+  inline std::uint16_t printable (std::uint8_t c) { return std::uint16_t(c); }
 
 } // end namespace Impl
 
