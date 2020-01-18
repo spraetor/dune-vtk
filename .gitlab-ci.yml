@@ -1,8 +1,4 @@
 ---
-before_script:
-  - duneci-install-module https://gitlab.dune-project.org/martin.nolte/dune-polygongrid.git
-  - duneci-install-module https://gitlab.dune-project.org/extensions/dune-spgrid.git
-
 dune-2.6 gcc-6-14:
   image: registry.dune-project.org/docker/ci/dune-pdelab-deps:2.6-debian-9-gcc-6-14
   script: duneci-standard-test
