@@ -41,19 +41,19 @@ namespace Dune
 
   namespace Impl
   {
-    // A structured grid with constant spacing in x, y, and z direction.
+    // A structured grid with coordinates in x, y, and z direction with arbitrary spacing
     template <class GridView, int dim, class Coordinates>
     struct VtkWriterImpl<GridView, YaspGrid<dim,Coordinates>>
     {
-      using type = VtkImageDataWriter<GridView, YaspDataCollector<GridView>>;
+      using type = VtkRectilinearGridWriter<GridView, YaspDataCollector<GridView>>;
     };
 
 #if HAVE_DUNE_SPGRID
-    // A structured grid with constant spacing in x, y, and z direction.
+    // A structured grid with coordinates in x, y, and z direction with arbitrary spacing
     template <class GridView, class ct, int dim, template <int> class Ref, class Comm>
     struct VtkWriterImpl<GridView, SPGrid<ct,dim,Ref,Comm>>
     {
-      using type = VtkImageDataWriter<GridView, SPDataCollector<GridView>>;
+      using type = VtkRectilinearGridWriter<GridView, SPDataCollector<GridView>>;
     };
 #endif
 

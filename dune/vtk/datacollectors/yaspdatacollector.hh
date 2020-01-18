@@ -26,7 +26,7 @@ public:
     , extent_(filledArray<6,int>(0))
     , origin_(0.0)
     , spacing_(0.0)
-    , level_(gridView.template begin<0,All_Partition>()->level())
+    , level_(0)
   {}
 
   std::array<int, 6> const& wholeExtentImpl () const
@@ -53,12 +53,13 @@ public:
   {
     Super::updateImpl();
 
+    level_ = gridView_.template begin<0,All_Partition>()->level();
     for (int i = 0; i < dim; ++i) {
       wholeExtent_[2*i] = 0;
-      wholeExtent_[2*i+1] = grid(gridView_).levelSize(level_,i);
+      wholeExtent_[2*i+1] = grid(gridView_.grid()).levelSize(level_,i);
     }
 
-    auto const& gl = *grid(gridView_).begin(level_);
+    auto const& gl = *grid(gridView_.grid()).begin(level_);
     auto const& g = gl.interior[0];
     auto const& gc = *g.dataBegin();
     for (int i = 0; i < dim; ++i) {
@@ -66,7 +67,7 @@ public:
       extent_[2*i+1] = gc.max(i)+1;
     }
 
-    auto it = grid(gridView_).begin(level_);
+    auto it = grid(gridView_.grid()).begin(level_);
     initGeometry(it->coords);
   }
 
@@ -99,7 +100,7 @@ public:
   template <class T>
   std::array<std::vector<T>, 3> coordinatesImpl () const
   {
-    auto it = grid(gridView_).begin(level_);
+    auto it = grid(gridView_.grid()).begin(level_);
     auto const& coords = it->coords;
 
     std::array<std::vector<T>, 3> ordinates{};
@@ -122,18 +123,18 @@ private:
   template <class G>
   using HostGrid = decltype(std::declval<G>().hostGrid());
 
-  template <class GV,
-    std::enable_if_t<Std::is_detected<HostGrid, typename GV::Grid>::value, int> = 0>
-  auto const& grid (GV const& gridView) const
+  template <class G,
+    std::enable_if_t<not Std::is_detected<HostGrid, G>::value, int> = 0>
+  auto const& grid (G const& g) const
   {
-    return gridView.grid().hostGrid();
+    return g;
   }
 
-  template <class GV,
-    std::enable_if_t<not Std::is_detected<HostGrid, typename GV::Grid>::value, int> = 0>
-  auto const& grid (GV const& gridView) const
+  template <class G,
+    std::enable_if_t<Std::is_detected<HostGrid, G>::value, int> = 0>
+  auto const& grid (G const& g) const
   {
-    return gridView.grid();
+    return grid(g.hostGrid());
   }
 
 protected:
