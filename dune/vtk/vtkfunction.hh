@@ -16,24 +16,6 @@ namespace Dune
   template <class T, int N, int M>
   class FieldMatrix;
 
-  namespace Impl
-  {
-    template <class T, class = void>
-    struct SizeImpl
-        : std::integral_constant<int, 1> {};
-
-    template <class T, int N>
-    struct SizeImpl<FieldVector<T,N>>
-        : std::integral_constant<int, N> {};
-
-    template <class T, int N, int M>
-    struct SizeImpl<FieldMatrix<T,N,M>>
-        : std::integral_constant<int, N*M> {};
-  }
-
-  template <class T>
-  constexpr int sizeOf () { return Impl::SizeImpl<std::decay_t<T>>::value; }
-
 
   /// Wrapper class for functions allowing local evaluations.
   template <class GridView>
@@ -46,6 +28,22 @@ namespace Dune
 
     template <class F>
     using Range = std::decay_t<decltype(std::declval<F>()(std::declval<Domain>()))>;
+
+  private:
+
+    template <class T, int N>
+    static auto sizeOfImpl (FieldVector<T,N> const&)
+      -> std::integral_constant<int, N> { return {}; }
+
+    template <class T, int N, int M>
+    static auto sizeOfImpl (FieldMatrix<T,N,M> const&)
+      -> std::integral_constant<int, N*M> { return {}; };
+
+    static auto sizeOfImpl (...)
+      -> std::integral_constant<int, 1> { return {}; }
+
+    template <class T>
+    static constexpr int sizeOf () { return decltype(sizeOfImpl(std::declval<T>()))::value; }
 
   public:
     /// Constructor VtkFunction from legacy VTKFunction

@@ -13,7 +13,10 @@
 #include <dune/common/filledarray.hh>
 #include <dune/common/test/testsuite.hh>
 
+#if HAVE_UG
 #include <dune/grid/uggrid.hh>
+#endif
+
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 

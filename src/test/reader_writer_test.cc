@@ -7,13 +7,17 @@
 
 #include <cstring>
 #include <iostream>
+#include <set>
 #include <vector>
 
 #include <dune/common/parallel/mpihelper.hh> // An initializer of MPI
 #include <dune/common/filledarray.hh>
 #include <dune/common/test/testsuite.hh>
 
+#if HAVE_UG
 #include <dune/grid/uggrid.hh>
+#endif
+
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/utility/structuredgridfactory.hh>
 
