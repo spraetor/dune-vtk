@@ -1,3 +1,7 @@
+**This repository is deprecated!** Use the URL https://gitlab.dune-project.org/simon.praetorius/dune-vtk instead.
+
+---
+
 # Dune-Vtk
 File reader and writer for the VTK Format
 
